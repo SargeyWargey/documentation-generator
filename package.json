@@ -16,8 +16,182 @@
       {
         "command": "documentation-generator.helloWorld",
         "title": "Hello World"
+      },
+      {
+        "command": "documentation-generator.generateDocs",
+        "title": "Generate Documentation",
+        "icon": "$(file-text)"
+      },
+      {
+        "command": "documentation-generator.selectTemplate",
+        "title": "Select Template",
+        "icon": "$(list-selection)"
+      },
+      {
+        "command": "documentation-generator.openSettings",
+        "title": "Open Settings",
+        "icon": "$(settings-gear)"
+      },
+      {
+        "command": "documentation-generator.refreshSidebar",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "documentation-generator.generateHelpDocs",
+        "title": "📋 Help Documentation",
+        "icon": "$(question)"
+      },
+      {
+        "command": "documentation-generator.generatePRD",
+        "title": "📊 PRD (Product Requirements)",
+        "icon": "$(project)"
+      },
+      {
+        "command": "documentation-generator.generateTechSpec",
+        "title": "⚙️ Technical Specification",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "documentation-generator.generateMeetingSummary",
+        "title": "🤝 Meeting Summary",
+        "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "documentation-generator.generateCustomDocs",
+        "title": "📝 Custom Documentation",
+        "icon": "$(edit)"
       }
-    ]
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "documentationGenerator",
+          "name": "Documentation Generator",
+          "when": "true"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "documentationGeneratorContainer",
+          "title": "Documentation Generator",
+          "icon": "$(file-text)"
+        }
+      ]
+    },
+    "submenus": [
+      {
+        "id": "documentation-generator.submenu",
+        "label": "Generate Documentation"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "documentation-generator.refreshSidebar",
+          "when": "view == documentationGenerator",
+          "group": "navigation"
+        },
+        {
+          "command": "documentation-generator.openSettings",
+          "when": "view == documentationGenerator",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "documentation-generator.generateDocs",
+          "when": "view == documentationGenerator && viewItem == action",
+          "group": "inline"
+        }
+      ],
+      "explorer/context": [
+        {
+          "submenu": "documentation-generator.submenu",
+          "when": "explorerResourceIsFolder",
+          "group": "documentation@1"
+        }
+      ],
+      "documentation-generator.submenu": [
+        {
+          "command": "documentation-generator.generateHelpDocs",
+          "when": "explorerResourceIsFolder",
+          "group": "templates@1"
+        },
+        {
+          "command": "documentation-generator.generatePRD",
+          "when": "explorerResourceIsFolder",
+          "group": "templates@2"
+        },
+        {
+          "command": "documentation-generator.generateTechSpec",
+          "when": "explorerResourceIsFolder",
+          "group": "templates@3"
+        },
+        {
+          "command": "documentation-generator.generateMeetingSummary",
+          "when": "explorerResourceIsFolder",
+          "group": "templates@4"
+        },
+        {
+          "command": "documentation-generator.generateCustomDocs",
+          "when": "explorerResourceIsFolder",
+          "group": "templates@5"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "documentation-generator.generateDocs",
+        "key": "ctrl+shift+d",
+        "mac": "cmd+shift+d",
+        "when": "explorerViewletVisible"
+      },
+      {
+        "command": "documentation-generator.selectTemplate",
+        "key": "ctrl+shift+t",
+        "mac": "cmd+shift+t"
+      },
+      {
+        "command": "documentation-generator.openSettings",
+        "key": "ctrl+shift+comma",
+        "mac": "cmd+shift+comma"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "Documentation Generator",
+      "properties": {
+        "documentation-generator.templateDirectory": {
+          "type": "string",
+          "default": "",
+          "description": "Custom template directory path"
+        },
+        "documentation-generator.outputNamePattern": {
+          "type": "string",
+          "default": "generated-docs-{template}-{date}",
+          "description": "Pattern for output file naming. Use {template}, {date}, {folder} as variables"
+        },
+        "documentation-generator.claudeIntegrationMethod": {
+          "type": "string",
+          "enum": ["slash-commands", "mcp-server"],
+          "default": "slash-commands",
+          "description": "Method for Claude Code integration"
+        },
+        "documentation-generator.autoRefreshSidebar": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically refresh sidebar when templates change"
+        },
+        "documentation-generator.showProgressNotifications": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show progress notifications during documentation generation"
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
