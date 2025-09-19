@@ -2,3 +2,4 @@
 export * from './TemplateManager';
 export * from './TemplateProcessor';
 export * from './TemplateValidator';
+export * from './TemplateHelpSystem';

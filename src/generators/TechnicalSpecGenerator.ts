@@ -406,19 +406,19 @@ export class TechnicalSpecGenerator {
     ): ArchitectureAnalysis['components'][number]['type'] {
         const lowerName = name.toLowerCase();
 
-        if (lowerName.includes('service')) return 'service';
-        if (lowerName.includes('controller') || lowerName.includes('handler')) return 'api';
-        if (lowerName.includes('model') || lowerName.includes('entity')) return 'database';
-        if (lowerName.includes('component') || lowerName.includes('ui')) return 'ui';
-        if (lowerName.includes('middleware')) return 'middleware';
-        if (lowerName.includes('util') || lowerName.includes('helper')) return 'library';
+        if (lowerName.includes('service')) {return 'service';}
+        if (lowerName.includes('controller') || lowerName.includes('handler')) {return 'api';}
+        if (lowerName.includes('model') || lowerName.includes('entity')) {return 'database';}
+        if (lowerName.includes('component') || lowerName.includes('ui')) {return 'ui';}
+        if (lowerName.includes('middleware')) {return 'middleware';}
+        if (lowerName.includes('util') || lowerName.includes('helper')) {return 'library';}
 
         // Infer from file extensions
         const hasReactComponents = files.some(f => f.path.includes('.jsx') || f.path.includes('.tsx'));
-        if (hasReactComponents) return 'ui';
+        if (hasReactComponents) {return 'ui';}
 
         const hasAPIFiles = files.some(f => f.content?.includes('app.') || f.content?.includes('router'));
-        if (hasAPIFiles) return 'api';
+        if (hasAPIFiles) {return 'api';}
 
         return 'library';
     }
@@ -493,8 +493,8 @@ export class TechnicalSpecGenerator {
         const totalLines = files.reduce((sum, f) => sum + (f.size || 0), 0);
         const fileCount = files.length;
 
-        if (totalLines > 5000 || fileCount > 15) return 'high';
-        if (totalLines > 1500 || fileCount > 8) return 'medium';
+        if (totalLines > 5000 || fileCount > 15) {return 'high';}
+        if (totalLines > 1500 || fileCount > 8) {return 'medium';}
         return 'low';
     }
 
@@ -907,9 +907,9 @@ export class TechnicalSpecGenerator {
     ): DatabaseSchema['databases'][number]['type'] {
         const content = files.map(f => f.content || '').join(' ').toLowerCase();
 
-        if (content.includes('mongodb') || content.includes('mongoose')) return 'nosql';
-        if (content.includes('redis')) return 'cache';
-        if (content.includes('elasticsearch')) return 'search';
+        if (content.includes('mongodb') || content.includes('mongoose')) {return 'nosql';}
+        if (content.includes('redis')) {return 'cache';}
+        if (content.includes('elasticsearch')) {return 'search';}
         return 'relational'; // Default
     }
 
@@ -985,10 +985,10 @@ export class TechnicalSpecGenerator {
     }
 
     private extractTypeFromField(fieldDef: string): string {
-        if (fieldDef.includes('DataTypes.STRING')) return 'VARCHAR';
-        if (fieldDef.includes('DataTypes.INTEGER')) return 'INTEGER';
-        if (fieldDef.includes('DataTypes.BOOLEAN')) return 'BOOLEAN';
-        if (fieldDef.includes('DataTypes.DATE')) return 'TIMESTAMP';
+        if (fieldDef.includes('DataTypes.STRING')) {return 'VARCHAR';}
+        if (fieldDef.includes('DataTypes.INTEGER')) {return 'INTEGER';}
+        if (fieldDef.includes('DataTypes.BOOLEAN')) {return 'BOOLEAN';}
+        if (fieldDef.includes('DataTypes.DATE')) {return 'TIMESTAMP';}
         return 'VARCHAR'; // Default
     }
 
@@ -1144,11 +1144,11 @@ export class TechnicalSpecGenerator {
     }
 
     private inferVariableType(value: string): string {
-        if (!value) return 'string';
+        if (!value) {return 'string';}
 
         const trimmed = value.trim();
-        if (trimmed === 'true' || trimmed === 'false') return 'boolean';
-        if (/^\d+$/.test(trimmed)) return 'number';
+        if (trimmed === 'true' || trimmed === 'false') {return 'boolean';}
+        if (/^\d+$/.test(trimmed)) {return 'number';}
         return 'string';
     }
 
@@ -1182,10 +1182,10 @@ export class TechnicalSpecGenerator {
     private inferConfigFormat(
         path: string
     ): ConfigurationDocumentation['configFiles'][number]['format'] {
-        if (path.endsWith('.json')) return 'json';
-        if (path.endsWith('.yaml') || path.endsWith('.yml')) return 'yaml';
-        if (path.endsWith('.ini')) return 'ini';
-        if (path.endsWith('.env')) return 'env';
+        if (path.endsWith('.json')) {return 'json';}
+        if (path.endsWith('.yaml') || path.endsWith('.yml')) {return 'yaml';}
+        if (path.endsWith('.ini')) {return 'ini';}
+        if (path.endsWith('.env')) {return 'env';}
         return 'json'; // Default
     }
 
@@ -1436,11 +1436,11 @@ export class TechnicalSpecGenerator {
 
         for (const file of testFiles) {
             if (file.content) {
-                if (file.content.includes('jest')) tools.add('Jest');
-                if (file.content.includes('mocha')) tools.add('Mocha');
-                if (file.content.includes('chai')) tools.add('Chai');
-                if (file.content.includes('jasmine')) tools.add('Jasmine');
-                if (file.content.includes('vitest')) tools.add('Vitest');
+                if (file.content.includes('jest')) {tools.add('Jest');}
+                if (file.content.includes('mocha')) {tools.add('Mocha');}
+                if (file.content.includes('chai')) {tools.add('Chai');}
+                if (file.content.includes('jasmine')) {tools.add('Jasmine');}
+                if (file.content.includes('vitest')) {tools.add('Vitest');}
             }
         }
 
@@ -1452,10 +1452,10 @@ export class TechnicalSpecGenerator {
 
         for (const file of testFiles) {
             if (file.content) {
-                if (file.content.includes('cypress')) tools.add('Cypress');
-                if (file.content.includes('playwright')) tools.add('Playwright');
-                if (file.content.includes('selenium')) tools.add('Selenium');
-                if (file.content.includes('puppeteer')) tools.add('Puppeteer');
+                if (file.content.includes('cypress')) {tools.add('Cypress');}
+                if (file.content.includes('playwright')) {tools.add('Playwright');}
+                if (file.content.includes('selenium')) {tools.add('Selenium');}
+                if (file.content.includes('puppeteer')) {tools.add('Puppeteer');}
             }
         }
 
@@ -1779,9 +1779,9 @@ export class TechnicalSpecGenerator {
     private inferArchitectureStyle(analysisResult: FolderContext): string {
         const paths = analysisResult.files.map(f => f.path.toLowerCase());
 
-        if (paths.some(p => p.includes('microservice'))) return 'Microservices';
-        if (paths.some(p => p.includes('api')) && paths.some(p => p.includes('client'))) return 'Client-Server';
-        if (paths.some(p => p.includes('component'))) return 'Component-based';
+        if (paths.some(p => p.includes('microservice'))) {return 'Microservices';}
+        if (paths.some(p => p.includes('api')) && paths.some(p => p.includes('client'))) {return 'Client-Server';}
+        if (paths.some(p => p.includes('component'))) {return 'Component-based';}
         return 'Layered Architecture';
     }
 
@@ -1819,12 +1819,12 @@ export class TechnicalSpecGenerator {
                 const pkg = JSON.parse(packageJson.content);
                 const deps = { ...pkg.dependencies, ...pkg.devDependencies };
 
-                if (deps.react) return 'React';
-                if (deps.vue) return 'Vue.js';
-                if (deps.angular) return 'Angular';
-                if (deps.express) return 'Express.js';
-                if (deps.next) return 'Next.js';
-                if (deps.nuxt) return 'Nuxt.js';
+                if (deps.react) {return 'React';}
+                if (deps.vue) {return 'Vue.js';}
+                if (deps.angular) {return 'Angular';}
+                if (deps.express) {return 'Express.js';}
+                if (deps.next) {return 'Next.js';}
+                if (deps.nuxt) {return 'Nuxt.js';}
             } catch {
                 // Ignore JSON parsing errors
             }

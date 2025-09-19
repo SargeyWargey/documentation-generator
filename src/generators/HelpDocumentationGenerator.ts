@@ -281,8 +281,8 @@ export class HelpDocumentationGenerator {
         const totalLines = files.reduce((sum, f) => sum + (f.size || 0), 0);
         const fileCount = files.length;
 
-        if (totalLines > 5000 || fileCount > 10) return 'high';
-        if (totalLines > 1000 || fileCount > 5) return 'medium';
+        if (totalLines > 5000 || fileCount > 10) {return 'high';}
+        if (totalLines > 1000 || fileCount > 5) {return 'medium';}
         return 'low';
     }
 

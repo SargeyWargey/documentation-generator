@@ -70,7 +70,7 @@ export class ErrorHandler {
     config?: Partial<RetryConfig>
   ): Promise<T> {
     const retryConfig = { ...this.retryConfig, ...config };
-    let lastError: Error;
+    let lastError: Error = new Error('Operation failed');
 
     for (let attempt = 0; attempt <= retryConfig.maxRetries; attempt++) {
       try {
@@ -129,8 +129,8 @@ export class ErrorHandler {
     }
 
     // All retries exhausted, handle the error
-    await this.handleError(lastError!, context);
-    throw lastError!;
+    await this.handleError(lastError, context);
+    throw lastError;
   }
 
   /**

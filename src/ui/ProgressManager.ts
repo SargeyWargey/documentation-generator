@@ -190,7 +190,7 @@ export class ProgressUtils {
     maxRetries: number = 3,
     progressReporter?: (attempt: number) => void
   ): Promise<T> {
-    let lastError: Error;
+    let lastError: Error = new Error('Operation failed');
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -199,7 +199,7 @@ export class ProgressUtils {
         }
         return await operation();
       } catch (error) {
-        lastError = error as Error;
+        lastError = error instanceof Error ? error : new Error(String(error));
         if (attempt === maxRetries) {
           throw lastError;
         }
@@ -208,7 +208,7 @@ export class ProgressUtils {
       }
     }
 
-    throw lastError!;
+    throw lastError;
   }
 
   /**

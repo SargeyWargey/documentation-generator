@@ -319,7 +319,7 @@ export class TemplateValidator {
       const lines = frontmatter.split('\n');
 
       for (const line of lines) {
-        if (line.trim() === '') continue;
+        if (line.trim() === '') {continue;}
 
         if (!line.includes(':')) {
           result.errors.push(

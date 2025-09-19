@@ -413,8 +413,8 @@ export class MeetingSummaryGenerator {
         }
 
         // Default estimation based on description length
-        if (description.length < 50) return '2 hours';
-        if (description.length < 100) return '4 hours';
+        if (description.length < 50) {return '2 hours';}
+        if (description.length < 100) {return '4 hours';}
         return '1 day';
     }
 
@@ -635,7 +635,7 @@ export class MeetingSummaryGenerator {
 
     private isNearText(index: number, targetText: string, content: string): boolean {
         const targetIndex = content.toLowerCase().indexOf(targetText.toLowerCase());
-        if (targetIndex === -1) return false;
+        if (targetIndex === -1) {return false;}
 
         const distance = Math.abs(index - targetIndex);
         return distance < 500; // Within 500 characters

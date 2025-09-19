@@ -738,7 +738,7 @@ export class FolderAnalyzer {
    * Generate a summary for a single file
    */
   private generateFileSummary(file: FileInfo): string {
-    if (!file.content) return '';
+    if (!file.content) {return '';}
 
     const lines = file.content.split('\n');
     const nonEmptyLines = lines.filter((line) => line.trim() !== '').length;
@@ -779,7 +779,7 @@ export class FolderAnalyzer {
 
   private extractParameters(line: string): string[] {
     const match = line.match(/\(([^)]*)\)/);
-    if (!match) return [];
+    if (!match) {return [];}
 
     return match[1]
       .split(',')
@@ -789,7 +789,7 @@ export class FolderAnalyzer {
 
   private extractPythonParameters(line: string): string[] {
     const match = line.match(/\(([^)]*)\)/);
-    if (!match) return [];
+    if (!match) {return [];}
 
     return match[1]
       .split(',')
@@ -814,8 +814,8 @@ export class FolderAnalyzer {
         } else if (inString && char === stringChar && line[j - 1] !== '\\') {
           inString = false;
         } else if (!inString) {
-          if (char === '{') braceCount++;
-          else if (char === '}') braceCount--;
+          if (char === '{') {braceCount++;}
+          else if (char === '}') {braceCount--;}
         }
       }
 
@@ -832,7 +832,7 @@ export class FolderAnalyzer {
 
     for (let i = start + 1; i < lines.length; i++) {
       const line = lines[i];
-      if (line.trim() === '') continue;
+      if (line.trim() === '') {continue;}
 
       const indent = line.length - line.trimStart().length;
       if (indent <= startIndent) {
