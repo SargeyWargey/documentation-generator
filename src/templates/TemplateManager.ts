@@ -15,10 +15,17 @@ export interface TemplateMetadata {
 export interface TemplateVariable {
   name: string;
   description: string;
-  type: 'string' | 'number' | 'boolean' | 'date' | 'select';
+  type: 'string' | 'number' | 'boolean' | 'date' | 'array' | 'select';
   required?: boolean;
   default?: any;
   options?: string[]; // For select type
+  validation?: {
+    minLength?: number;
+    maxLength?: number;
+    minItems?: number;
+    maxItems?: number;
+    pattern?: string;
+  };
 }
 
 export interface Template {
@@ -270,19 +277,223 @@ export class TemplateManager {
   ): string {
     let result = content;
 
-    // Replace {{variable}} patterns
-    for (const [key, value] of Object.entries(variables)) {
-      const regex = new RegExp(`{{\\s*${key}\\s*}}`, 'g');
-      result = result.replace(regex, String(value));
-    }
-
     // Add common variables
     const now = new Date();
-    result = result.replace(/{{date}}/g, now.toLocaleDateString());
-    result = result.replace(/{{datetime}}/g, now.toLocaleString());
-    result = result.replace(/{{year}}/g, now.getFullYear().toString());
+    const commonVariables = {
+      currentDate: now.toLocaleDateString(),
+      currentDateTime: now.toLocaleString(),
+      currentYear: now.getFullYear().toString(),
+      nextReviewDate: new Date(now.setMonth(now.getMonth() + 3)).toLocaleDateString(),
+      ...variables
+    };
+
+    // Process array iterations {{#arrayName}}...{{/arrayName}}
+    result = this.processArrayIterations(result, commonVariables);
+
+    // Process conditionals {{#if condition}}...{{/if}}
+    result = this.processConditionals(result, commonVariables);
+
+    // Replace simple {{variable}} patterns
+    for (const [key, value] of Object.entries(commonVariables)) {
+      const regex = new RegExp(`{{\\s*${key}\\s*}}`, 'g');
+      result = result.replace(regex, String(value || ''));
+    }
+
+    // Process analysis data patterns {{analysis.property}}
+    result = this.processAnalysisData(result, commonVariables);
+
+    // Clean up any remaining unprocessed template syntax
+    result = this.cleanupUnprocessedSyntax(result);
 
     return result;
+  }
+
+  private processArrayIterations(
+    content: string,
+    variables: Record<string, any>
+  ): string {
+    let result = content;
+
+    // Match {{#arrayName}}...{{/arrayName}} patterns
+    const arrayPattern = /{{#(\w+)}}([\s\S]*?){{\/\1}}/g;
+    let match;
+
+    while ((match = arrayPattern.exec(content)) !== null) {
+      const [fullMatch, arrayName, template] = match;
+      const arrayData = variables[arrayName];
+
+      if (Array.isArray(arrayData)) {
+        let replacement = '';
+        arrayData.forEach((item, index) => {
+          let itemContent = template;
+
+          // Handle objects in array
+          if (typeof item === 'object' && item !== null) {
+            for (const [key, value] of Object.entries(item)) {
+              const regex = new RegExp(`{{\\s*${key}\\s*}}`, 'g');
+              itemContent = itemContent.replace(regex, String(value || ''));
+            }
+          } else {
+            // Handle simple values
+            itemContent = itemContent.replace(/{{\.}}/g, String(item));
+          }
+
+          // Add index support
+          itemContent = itemContent.replace(/{{@index}}/g, String(index + 1));
+          itemContent = itemContent.replace(/{{@index0}}/g, String(index));
+
+          replacement += itemContent;
+        });
+        result = result.replace(fullMatch, replacement);
+      } else {
+        // Remove the block if no array data
+        result = result.replace(fullMatch, '');
+      }
+    }
+
+    return result;
+  }
+
+  private processConditionals(
+    content: string,
+    variables: Record<string, any>
+  ): string {
+    let result = content;
+
+    // Match {{#if condition}}...{{/if}} patterns with optional {{else}}
+    const conditionalPattern = /{{#if\s+(\w+)}}([\s\S]*?)(?:{{else}}([\s\S]*?))?{{\/if}}/g;
+    let match;
+
+    while ((match = conditionalPattern.exec(content)) !== null) {
+      const [fullMatch, condition, ifContent, elseContent = ''] = match;
+      const conditionValue = variables[condition];
+
+      let replacement = '';
+      if (this.isTruthy(conditionValue)) {
+        replacement = ifContent;
+      } else {
+        replacement = elseContent;
+      }
+
+      result = result.replace(fullMatch, replacement);
+    }
+
+    return result;
+  }
+
+  private processAnalysisData(
+    content: string,
+    variables: Record<string, any>
+  ): string {
+    let result = content;
+
+    // Handle {{analysis.property}} patterns
+    const analysisPattern = /{{analysis\.(\w+)}}/g;
+    let match;
+
+    while ((match = analysisPattern.exec(content)) !== null) {
+      const [fullMatch, property] = match;
+      const analysisData = variables.analysis || {};
+      const value = analysisData[property] || '';
+      result = result.replace(fullMatch, String(value));
+    }
+
+    return result;
+  }
+
+  private cleanupUnprocessedSyntax(content: string): string {
+    // Remove any remaining unprocessed template syntax
+    return content
+      .replace(/{{#\w+}}[\s\S]*?{{\/\w+}}/g, '') // Unprocessed array iterations
+      .replace(/{{#if\s+\w+}}[\s\S]*?{{\/if}}/g, '') // Unprocessed conditionals
+      .replace(/{{[^}]+}}/g, ''); // Any other unprocessed variables
+  }
+
+  private isTruthy(value: any): boolean {
+    if (Array.isArray(value)) {
+      return value.length > 0;
+    }
+    if (typeof value === 'string') {
+      return value.trim().length > 0;
+    }
+    return Boolean(value);
+  }
+
+  /**
+   * Load a template by type/ID
+   */
+  async loadTemplate(templateType: string): Promise<Template | null> {
+    const template = this.getTemplate(templateType);
+    if (template) {
+      return template;
+    }
+
+    // Try to load from file if not in cache
+    const templatePath = path.join(this.defaultTemplatesPath, `${templateType}.md`);
+    try {
+      const content = await fs.readFile(templatePath, 'utf-8');
+      const parsedTemplate = await this.parseTemplate(content, templatePath);
+      this.templates.set(parsedTemplate.id, parsedTemplate);
+      return parsedTemplate;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Process template content with variables
+   */
+  async processTemplateContent(
+    content: string,
+    variables: Record<string, any>
+  ): Promise<string> {
+    return this.substituteVariables(content, variables);
+  }
+
+  /**
+   * Validate template structure and metadata
+   */
+  validateTemplate(template: Template): { isValid: boolean; errors: string[] } {
+    const errors: string[] = [];
+
+    if (!template.metadata.name) {
+      errors.push('Template name is required');
+    }
+
+    if (!template.metadata.description) {
+      errors.push('Template description is required');
+    }
+
+    if (!template.metadata.category) {
+      errors.push('Template category is required');
+    }
+
+    if (template.metadata.variables) {
+      for (const variable of template.metadata.variables) {
+        if (!variable.name) {
+          errors.push('Variable name is required');
+        }
+        if (!variable.type) {
+          errors.push(`Variable type is required for ${variable.name}`);
+        }
+        if (variable.type === 'select' && (!variable.options || variable.options.length === 0)) {
+          errors.push(`Select variable ${variable.name} must have options`);
+        }
+      }
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  }
+
+  /**
+   * Get template variables with their metadata
+   */
+  getTemplateVariables(templateType: string): TemplateVariable[] {
+    const template = this.getTemplate(templateType);
+    return template?.metadata.variables || [];
   }
 
   private async createDefaultTemplates(): Promise<void> {

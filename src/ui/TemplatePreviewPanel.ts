@@ -103,7 +103,7 @@ export class TemplatePreviewPanel {
         contextVariables = {
           ...contextVariables,
           projectName: folderContext.name,
-          folderStructure: this.formatFolderStructure(folderContext.structure),
+          folderStructure: this.formatFolderStructure(folderContext.files),
           fileCount: folderContext.files.length,
           dependencies: folderContext.dependencies.join(', '),
           ...this.extractContextVariables(folderContext)

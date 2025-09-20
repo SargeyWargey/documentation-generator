@@ -294,7 +294,7 @@ export class TemplateHelpSystem {
     return practices;
   }
 
-  private generateTroubleshooting(template: Template): TroubleshootingItem[] {
+  private generateTroubleshooting(_template: Template): TroubleshootingItem[] {
     return [
       {
         issue: 'Template variables not being replaced',

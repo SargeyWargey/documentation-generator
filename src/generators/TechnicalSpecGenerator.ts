@@ -310,21 +310,31 @@ export class TechnicalSpecGenerator {
             sections.push(this.formatIntegrationMapping(integration));
         }
 
-        const templateName = options.templateName || 'technical-spec-default';
-        const template = this.templateManager.getTemplate(templateName);
+        const templateName = options.templateName || 'technical-template';
+        const template = await this.templateManager.loadTemplate(templateName);
+
         if (!template) {
             throw new Error(`Template '${templateName}' not found`);
         }
 
-        const variables = {
-            projectName: analysisResult.name || 'Project',
-            technicalLevel: options.technicalLevel,
-            sections: sections.join('\n\n'),
-            generatedDate: new Date().toISOString(),
-            summary: analysisResult.summary
+        // Map analysis data to template variables
+        const templateVariables = {
+            systemName: analysisResult.name || 'System',
+            architectureType: this.detectArchitectureType(analysisResult),
+            technologies: this.extractTechnologies(analysisResult),
+            apiEndpoints: options.includeAPISpec ? await this.generateAPIDocumentation(analysisResult) : [],
+            databaseTables: options.includeDatabaseSchema ? await this.analyzeDatabaseTables(analysisResult) : [],
+            deploymentStrategy: options.includeDeployment ? await this.analyzeDeploymentStrategy(analysisResult) : 'Standard deployment',
+            testingApproach: options.includeTestingStrategy ? await this.analyzeTestingApproach(analysisResult) : 'Unit and integration testing',
+            securityRequirements: await this.analyzeSecurityRequirements(analysisResult),
+            analysis: {
+                projectName: analysisResult.name,
+                fileCount: analysisResult.files.length,
+                dependencies: analysisResult.dependencies
+            }
         };
 
-        return await this.templateManager.processTemplate(templateName, variables);
+        return await this.templateManager.processTemplateContent(template.content, templateVariables);
     }
 
     async analyzeArchitecture(analysisResult: FolderContext): Promise<ArchitectureAnalysis> {
@@ -1831,6 +1841,146 @@ export class TechnicalSpecGenerator {
         }
 
         return 'Node.js';
+    }
+
+    private detectArchitectureType(analysisResult: FolderContext): 'microservices' | 'monolith' | 'serverless' {
+        const paths = analysisResult.files.map(f => f.path.toLowerCase());
+
+        if (paths.some(p => p.includes('microservice') || p.includes('lambda') || p.includes('function'))) {
+            return 'microservices';
+        }
+        if (paths.some(p => p.includes('serverless') || p.includes('lambda'))) {
+            return 'serverless';
+        }
+        return 'monolith';
+    }
+
+    private extractTechnologies(analysisResult: FolderContext): Array<{ category: string; technology: string }> {
+        const technologies: Array<{ category: string; technology: string }> = [];
+        const packageJson = analysisResult.files.find(f => f.path.endsWith('package.json'));
+
+        if (packageJson?.content) {
+            try {
+                const pkg = JSON.parse(packageJson.content);
+                const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+
+                // Frontend technologies
+                if (deps.react) technologies.push({ category: 'Frontend', technology: 'React' });
+                if (deps.vue) technologies.push({ category: 'Frontend', technology: 'Vue.js' });
+                if (deps.angular) technologies.push({ category: 'Frontend', technology: 'Angular' });
+
+                // Backend technologies
+                if (deps.express) technologies.push({ category: 'Backend', technology: 'Express.js' });
+                if (deps.koa) technologies.push({ category: 'Backend', technology: 'Koa.js' });
+                if (deps.fastify) technologies.push({ category: 'Backend', technology: 'Fastify' });
+
+                // Database technologies
+                if (deps.mongoose) technologies.push({ category: 'Database', technology: 'MongoDB' });
+                if (deps.pg || deps.postgres) technologies.push({ category: 'Database', technology: 'PostgreSQL' });
+                if (deps.mysql) technologies.push({ category: 'Database', technology: 'MySQL' });
+                if (deps.redis) technologies.push({ category: 'Cache', technology: 'Redis' });
+
+                // Testing technologies
+                if (deps.jest) technologies.push({ category: 'Testing', technology: 'Jest' });
+                if (deps.mocha) technologies.push({ category: 'Testing', technology: 'Mocha' });
+                if (deps.cypress) technologies.push({ category: 'Testing', technology: 'Cypress' });
+
+            } catch {
+                // Ignore JSON parsing errors
+            }
+        }
+
+        // Default technologies if none found
+        if (technologies.length === 0) {
+            technologies.push(
+                { category: 'Runtime', technology: 'Node.js' },
+                { category: 'Language', technology: this.inferPrimaryLanguage(analysisResult) }
+            );
+        }
+
+        return technologies;
+    }
+
+    private async generateAPIDocumentation(analysisResult: FolderContext): Promise<Array<{ method: string; endpoint: string; description: string; requestExample?: string; responseExample?: string }>> {
+        const apiSpec = await this.generateAPISpecification(analysisResult);
+        return apiSpec.endpoints.map(endpoint => ({
+            method: endpoint.method,
+            endpoint: endpoint.path,
+            description: endpoint.description,
+            requestExample: JSON.stringify({ example: 'request' }, null, 2),
+            responseExample: JSON.stringify({ example: 'response' }, null, 2)
+        }));
+    }
+
+    private async analyzeDatabaseTables(analysisResult: FolderContext): Promise<Array<{ tableName: string; description: string; columns: Array<{ name: string; type: string; description: string }> }>> {
+        const dbSchema = await this.generateDatabaseSchema(analysisResult);
+        return dbSchema.databases.flatMap(db =>
+            db.tables.map(table => ({
+                tableName: table.name,
+                description: table.description,
+                columns: table.columns.map(col => ({
+                    name: col.name,
+                    type: col.type,
+                    description: col.description
+                }))
+            }))
+        );
+    }
+
+    private async analyzeDeploymentStrategy(analysisResult: FolderContext): Promise<string> {
+        const hasDockerfile = analysisResult.files.some(f => f.path.includes('Dockerfile'));
+        const hasK8s = analysisResult.files.some(f => f.path.includes('k8s') || f.path.includes('kubernetes'));
+        const hasHeroku = analysisResult.files.some(f => f.path.includes('Procfile'));
+
+        if (hasK8s) return 'Kubernetes container orchestration';
+        if (hasDockerfile) return 'Docker containerized deployment';
+        if (hasHeroku) return 'Heroku cloud platform deployment';
+        return 'Traditional server deployment';
+    }
+
+    private async analyzeTestingApproach(analysisResult: FolderContext): Promise<string> {
+        const testStrategy = await this.generateTestingStrategy(analysisResult);
+        const approaches = testStrategy.levels.map(level => level.name).join(', ');
+        return approaches || 'Unit and integration testing';
+    }
+
+    private async analyzeSecurityRequirements(analysisResult: FolderContext): Promise<Array<string>> {
+        const requirements: string[] = [];
+
+        const hasAuth = analysisResult.files.some(f =>
+            f.content?.includes('auth') || f.content?.includes('jwt') || f.content?.includes('passport')
+        );
+
+        if (hasAuth) {
+            requirements.push('User authentication and authorization');
+        }
+
+        const hasEncryption = analysisResult.files.some(f =>
+            f.content?.includes('bcrypt') || f.content?.includes('crypto') || f.content?.includes('encrypt')
+        );
+
+        if (hasEncryption) {
+            requirements.push('Data encryption and hashing');
+        }
+
+        const hasValidation = analysisResult.files.some(f =>
+            f.content?.includes('joi') || f.content?.includes('yup') || f.content?.includes('validator')
+        );
+
+        if (hasValidation) {
+            requirements.push('Input validation and sanitization');
+        }
+
+        // Default security requirements
+        if (requirements.length === 0) {
+            requirements.push(
+                'Basic input validation',
+                'Secure HTTP headers',
+                'Environment variable protection'
+            );
+        }
+
+        return requirements;
     }
 
     // Formatting methods

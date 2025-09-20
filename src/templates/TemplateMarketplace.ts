@@ -376,7 +376,7 @@ export class TemplateMarketplace {
   /**
    * Handle rate template
    */
-  private async handleRateTemplate(data: { templateId: string; rating: number; review?: string }): Promise<void> {
+  private async handleRateTemplate(_data: { templateId: string; rating: number; review?: string }): Promise<void> {
     // In a real implementation, this would submit the rating to the marketplace API
     vscode.window.showInformationMessage('Thank you for your rating!');
   }
@@ -384,10 +384,10 @@ export class TemplateMarketplace {
   /**
    * Handle template submission
    */
-  private async handleTemplateSubmission(template: Template, submissionData: any): Promise<void> {
+  private async handleTemplateSubmission(_template: Template, _submissionData: any): Promise<void> {
     // In a real implementation, this would upload the template to the marketplace
     vscode.window.showInformationMessage(
-      `Template '${template.metadata.name}' submitted for review. You'll be notified when it's approved.`
+      `Template '${_template.metadata.name}' submitted for review. You'll be notified when it's approved.`
     );
   }
 

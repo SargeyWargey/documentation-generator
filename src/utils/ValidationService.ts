@@ -17,7 +17,7 @@ export interface ValidationResult {
 
 export interface ValidationSchema {
   required?: boolean;
-  type?: 'string' | 'number' | 'boolean' | 'array' | 'object' | 'date' | 'email' | 'url' | 'path';
+  type?: 'string' | 'number' | 'boolean' | 'array' | 'object' | 'date' | 'email' | 'url' | 'path' | 'select';
   minLength?: number;
   maxLength?: number;
   min?: number;

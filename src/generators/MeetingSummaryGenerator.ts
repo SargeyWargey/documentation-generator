@@ -202,23 +202,33 @@ export class MeetingSummaryGenerator {
             sections.push(this.formatSeriesAnalysis(seriesAnalysis));
         }
 
-        const templateName = options.templateName || this.getDefaultTemplateName(options.meetingType);
-        const template = this.templateManager.getTemplate(templateName);
-
-        const variables = {
-            meetingTitle: meetingContext.title,
-            meetingDate: meetingContext.date,
-            meetingType: options.meetingType,
-            sections: sections.join('\n\n'),
-            generatedDate: new Date().toISOString(),
-            participantCount: meetingContext.participants.length,
-            duration: meetingContext.duration
-        };
+        const templateName = options.templateName || 'meeting-template';
+        const template = await this.templateManager.loadTemplate(templateName);
 
         if (!template) {
             throw new Error(`Template '${templateName}' not found`);
         }
-        return await this.templateManager.processTemplate(templateName, variables);
+
+        // Map meeting data to template variables
+        const templateVariables = {
+            meetingTitle: meetingContext.title,
+            meetingDate: meetingContext.date,
+            meetingType: options.meetingType,
+            duration: meetingContext.duration,
+            participants: meetingContext.participants.map(p => ({ name: p.name, role: p.role })),
+            agenda: meetingContext.agenda,
+            decisions: options.includeDecisionTracking ? await this.extractDecisions(discussionContent, meetingContext) : [],
+            actionItems: options.includeActionItems ? await this.extractActionItems(discussionContent, meetingContext) : [],
+            nextSteps: options.includeFollowUpTasks ? await this.generateFollowUpTasks(discussionContent, meetingContext) : [],
+            analysis: {
+                participantCount: meetingContext.participants.length,
+                meetingType: options.meetingType,
+                hasActionItems: options.includeActionItems,
+                hasDecisions: options.includeDecisionTracking
+            }
+        };
+
+        return await this.templateManager.processTemplateContent(template.content, templateVariables);
     }
 
     async extractActionItems(discussionContent: string, context: MeetingContext): Promise<ActionItem[]> {

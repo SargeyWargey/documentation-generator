@@ -267,7 +267,7 @@ export class VariableDefinitionEditor {
   /**
    * Generate HTML for the variable editor webview
    */
-  private generateVariableEditorHTML(variable?: TemplateVariable, existingVariables: TemplateVariable[] = []): string {
+  private generateVariableEditorHTML(variable?: TemplateVariable, _existingVariables: TemplateVariable[] = []): string {
     const varData = variable || {
       name: '',
       description: '',

@@ -397,7 +397,7 @@ export class DebuggingService {
     return diagnostics;
   }
 
-  private async getRecentLogs(limit: number = 50): Promise<LogEntry[]> {
+  private async getRecentLogs(_limit: number = 50): Promise<LogEntry[]> {
     // This would typically read from the logging service's log buffer
     // For now, return empty array as LoggingService needs to be enhanced
     return [];

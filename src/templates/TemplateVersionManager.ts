@@ -595,7 +595,7 @@ export class TemplateVersionManager {
   /**
    * Execute migration plan
    */
-  private async executeMigration(templateId: string, newTemplate: Template, plan: MigrationPlan): Promise<void> {
+  private async executeMigration(_templateId: string, newTemplate: Template, plan: MigrationPlan): Promise<void> {
     // Update template in manager
     await this.updateTemplateInManager(newTemplate);
 
@@ -650,7 +650,7 @@ export class TemplateVersionManager {
     return parts.join('.');
   }
 
-  private async detectDeprecatedFeatures(template: Template, history: VersionHistory): Promise<string[]> {
+  private async detectDeprecatedFeatures(_template: Template, _history: VersionHistory): Promise<string[]> {
     // This would analyze the template for deprecated patterns
     // For now, return empty array
     return [];
@@ -673,7 +673,7 @@ export class TemplateVersionManager {
     await fs.writeFile(historyFile, JSON.stringify(history, null, 2));
   }
 
-  private async updateTemplateInManager(template: Template): Promise<void> {
+  private async updateTemplateInManager(_template: Template): Promise<void> {
     // This would update the template in the TemplateManager
     // For now, we'll assume it's handled elsewhere
     // In a real implementation, you'd need to provide this functionality

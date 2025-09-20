@@ -102,21 +102,35 @@ export class HelpDocumentationGenerator {
             sections.push(this.formatFAQSection(faq));
         }
 
-        const templateName = options.templateName || 'help-documentation-default';
-        const template = this.templateManager.getTemplate(templateName);
+        const templateName = options.templateName || 'help-template';
+        const template = await this.templateManager.loadTemplate(templateName);
+
         if (!template) {
             throw new Error(`Template '${templateName}' not found`);
         }
 
-        const variables = {
+        // Extract main features from analysis
+        const features = await this.extractMainFeatures(analysisResult);
+
+        // Map analysis data to template variables
+        const templateVariables = {
             projectName: analysisResult.name || 'Project',
-            sections: sections.join('\n\n'),
-            generatedDate: new Date().toISOString(),
-            name: analysisResult.name,
-            summary: analysisResult.summary
+            projectDescription: analysisResult.summary || 'A comprehensive software project',
+            installationSteps: await this.generateInstallationSteps(analysisResult),
+            mainFeatures: features,
+            apiEndpoints: options.includeAPIReference ? await this.detectAndParseAPIDocumentation(analysisResult) : [],
+            commonIssues: options.includeTroubleshooting ? await this.generateTroubleshootingSection(analysisResult) : [],
+            faq: options.includeFAQ ? await this.generateFAQSection(analysisResult) : [],
+            contactInfo: 'Please check the project repository for support information',
+            version: '1.0.0',
+            analysis: {
+                projectName: analysisResult.name,
+                fileCount: analysisResult.files.length,
+                dependencies: analysisResult.dependencies
+            }
         };
 
-        return await this.templateManager.processTemplate(templateName, variables);
+        return await this.templateManager.processTemplateContent(template.content, templateVariables);
     }
 
     async detectAndParseAPIDocumentation(analysisResult: FolderContext): Promise<APIDocumentation[]> {
@@ -624,5 +638,37 @@ ${entry.answer}
 **Tags:** ${entry.tags.join(', ')}`);
 
         return `## FAQ\n\n${entries.join('\n\n')}`;
+    }
+
+    private async extractMainFeatures(analysisResult: FolderContext): Promise<Array<{ name: string; description: string; usage?: string; examples?: string[] }>> {
+        const features: Array<{ name: string; description: string; usage?: string; examples?: string[] }> = [];
+
+        // Extract features from file structure and exports
+        const featureFiles = analysisResult.files.filter(file =>
+            file.exports && file.exports.length > 0 &&
+            !file.path.includes('test') &&
+            !file.path.includes('spec')
+        );
+
+        for (const file of featureFiles.slice(0, 5)) { // Limit to top 5 features
+            const fileName = file.path.split('/').pop()?.replace(/\.(ts|js|jsx|tsx)$/, '') || 'Unknown';
+            const feature = {
+                name: this.formatFeatureName(fileName),
+                description: `Feature provided by ${fileName} with ${file.exports?.length || 0} exported functions/classes`,
+                usage: file.exports?.length > 0 ? `import { ${file.exports[0]} } from '${file.path}'` : undefined,
+                examples: file.exports?.slice(0, 2).map(exp => `// Using ${exp}\nconst result = ${exp}();`) || []
+            };
+            features.push(feature);
+        }
+
+        return features;
+    }
+
+    private formatFeatureName(fileName: string): string {
+        return fileName
+            .replace(/([A-Z])/g, ' $1')
+            .replace(/[-_]/g, ' ')
+            .trim()
+            .replace(/^\w/, c => c.toUpperCase());
     }
 }

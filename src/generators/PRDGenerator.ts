@@ -185,22 +185,41 @@ export class PRDGenerator {
             sections.push(this.formatTimeline(timeline));
         }
 
-        const templateName = options.templateName || 'prd-default';
-        const template = this.templateManager.getTemplate(templateName);
-
-        const variables = {
-            projectName: analysisResult.name || 'Project',
-            businessContext: options.businessContext,
-            targetAudience: options.targetAudience.join(', '),
-            sections: sections.join('\n\n'),
-            generatedDate: new Date().toISOString(),
-            summary: analysisResult.summary
-        };
+        const templateName = options.templateName || 'prd-template';
+        const template = await this.templateManager.loadTemplate(templateName);
 
         if (!template) {
             throw new Error(`Template '${templateName}' not found`);
         }
-        return await this.templateManager.processTemplate(templateName, variables);
+
+        // Map analysis data to template variables
+        const templateVariables = {
+            productName: analysisResult.name || 'Project',
+            productVision: options.businessContext || 'Improve user experience through enhanced functionality',
+            targetAudience: options.targetAudience.map(audience => ({ name: audience, description: `${audience} users` })),
+            businessGoals: [
+                { goal: 'Improve user satisfaction', rationale: 'Based on code analysis and feature requirements' },
+                { goal: 'Enhance system reliability', rationale: 'Through improved architecture and testing' }
+            ],
+            projectDescription: analysisResult.summary || 'Project analysis and requirements definition',
+            userStories: await this.generateUserStories(analysisResult, await this.extractFeatureRequirements(analysisResult)),
+            stakeholders: [
+                { name: 'Development Team', role: 'Implementation', responsibilities: 'Code development and testing' },
+                { name: 'Product Manager', role: 'Strategy', responsibilities: 'Requirements and roadmap' }
+            ],
+            dependencies: analysisResult.dependencies?.map(dep => ({
+                name: dep.name || dep,
+                description: `External dependency used in project`,
+                type: 'library'
+            })) || [],
+            analysis: {
+                projectName: analysisResult.name,
+                fileCount: analysisResult.files.length,
+                dependencies: analysisResult.dependencies
+            }
+        };
+
+        return await this.templateManager.processTemplateContent(template.content, templateVariables);
     }
 
     async extractFeatureRequirements(analysisResult: FolderContext): Promise<FeatureRequirement[]> {
