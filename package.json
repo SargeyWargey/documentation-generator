@@ -228,7 +228,8 @@
       "**/__tests__/**/*.ts",
       "**/?(*.)+(spec|test).ts"
     ],
-    "testPathIgnorePatterns": ["<rootDir>/src/test/"],
+    "testPathIgnorePatterns": ["<rootDir>/src/test/extension.test.ts"],
+    "setupFilesAfterEnv": ["<rootDir>/src/test/setup.ts"],
     "transform": {
       "^.+\\.ts$": "ts-jest"
     },
