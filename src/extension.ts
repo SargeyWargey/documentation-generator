@@ -497,7 +497,8 @@ Would you like to:`;
     }),
 
     vscode.commands.registerCommand('documentation-generator.manageTemplates', () => {
-      vscode.window.showInformationMessage('Template management will be available soon!');
+      const { TemplateManagementPanel } = require('./ui/TemplateManagementPanel');
+      TemplateManagementPanel.createOrShow(context.extensionUri, templateManager);
     }),
 
     vscode.commands.registerCommand('documentation-generator.showHelp', () => {

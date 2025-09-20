@@ -1,4 +1,4 @@
-import { FolderContext } from '../utils/FolderAnalyzer';
+import { FolderContext, ExportInfo } from '../utils/FolderAnalyzer';
 import { TemplateManager } from '../templates/TemplateManager';
 import { ClaudeIntegrator } from '../commands/ClaudeIntegrator';
 
@@ -643,20 +643,23 @@ ${entry.answer}
     private async extractMainFeatures(analysisResult: FolderContext): Promise<Array<{ name: string; description: string; usage?: string; examples?: string[] }>> {
         const features: Array<{ name: string; description: string; usage?: string; examples?: string[] }> = [];
 
-        // Extract features from file structure and exports
-        const featureFiles = analysisResult.files.filter(file =>
-            file.exports && file.exports.length > 0 &&
-            !file.path.includes('test') &&
-            !file.path.includes('spec')
-        );
+        // Extract features from files that have code structures with exports
+        const featureFiles = analysisResult.files.filter(file => {
+            const codeStructure = analysisResult.codeStructures.get(file.path);
+            return codeStructure && codeStructure.exports.length > 0 &&
+                !file.path.includes('test') &&
+                !file.path.includes('spec');
+        });
 
         for (const file of featureFiles.slice(0, 5)) { // Limit to top 5 features
             const fileName = file.path.split('/').pop()?.replace(/\.(ts|js|jsx|tsx)$/, '') || 'Unknown';
+            const codeStructure = analysisResult.codeStructures.get(file.path);
+            const exports = codeStructure?.exports || [];
             const feature = {
                 name: this.formatFeatureName(fileName),
-                description: `Feature provided by ${fileName} with ${file.exports?.length || 0} exported functions/classes`,
-                usage: file.exports?.length > 0 ? `import { ${file.exports[0]} } from '${file.path}'` : undefined,
-                examples: file.exports?.slice(0, 2).map(exp => `// Using ${exp}\nconst result = ${exp}();`) || []
+                description: `Feature provided by ${fileName} with ${exports.length} exported functions/classes`,
+                usage: exports.length > 0 ? `import { ${exports[0].name} } from '${file.path}'` : undefined,
+                examples: exports.slice(0, 2).map((exp: ExportInfo) => `// Using ${exp.name}\nconst result = ${exp.name}();`) || []
             };
             features.push(feature);
         }

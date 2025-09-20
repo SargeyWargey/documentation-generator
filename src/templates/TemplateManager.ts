@@ -159,6 +159,109 @@ export class TemplateManager {
     this.templates.delete(templateId);
   }
 
+  /**
+   * Get all templates
+   */
+  async getAllTemplates(): Promise<Map<string, Template>> {
+    return new Map(this.templates);
+  }
+
+
+  /**
+   * Save a template (create or update)
+   */
+  async saveTemplate(template: Template): Promise<void> {
+    // Validate template before saving
+    this.validateTemplateForSaving(template);
+
+    await this.ensureDirectoriesExist();
+
+    const templateContent = this.serializeTemplate(template);
+    const fileName = `${template.id}.md`;
+    const targetFile = path.join(this.userTemplatesPath, fileName);
+
+    await fs.writeFile(targetFile, templateContent);
+    this.templates.set(template.id, { ...template, filePath: targetFile });
+  }
+
+  /**
+   * Validate template structure and content
+   */
+  private validateTemplateForSaving(template: Template): void {
+    const validation = this.validateTemplate(template);
+    if (!validation.isValid) {
+      throw new Error(validation.errors.join(', '));
+    }
+
+    if (!template.id || template.id.trim() === '') {
+      throw new Error('Template ID is required');
+    }
+
+    if (!template.content || template.content.trim() === '') {
+      throw new Error('Template content is required');
+    }
+
+    // Validate template variables syntax
+    const variablePattern = /\{\{(\w+)\}\}/g;
+    const matches = template.content.match(variablePattern);
+    if (matches) {
+      for (const match of matches) {
+        const varName = match.replace(/\{\{|\}\}/g, '');
+        if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(varName)) {
+          throw new Error(`Invalid variable name: ${varName}. Variable names must start with a letter or underscore and contain only letters, numbers, and underscores.`);
+        }
+      }
+    }
+
+    // Validate version format if provided
+    if (template.metadata.version && !/^\d+\.\d+\.\d+$/.test(template.metadata.version)) {
+      throw new Error('Version must be in semantic versioning format (e.g., 1.0.0)');
+    }
+  }
+
+  /**
+   * Extract variables from template content
+   */
+  extractTemplateVariables(content: string): string[] {
+    const variablePattern = /\{\{(\w+)\}\}/g;
+    const variables: string[] = [];
+    let match;
+
+    while ((match = variablePattern.exec(content)) !== null) {
+      const varName = match[1];
+      if (!variables.includes(varName)) {
+        variables.push(varName);
+      }
+    }
+
+    return variables;
+  }
+
+  /**
+   * Delete a template (alias for removeTemplate)
+   */
+  async deleteTemplate(templateId: string): Promise<void> {
+    return this.removeTemplate(templateId);
+  }
+
+  /**
+   * Serialize template to file format
+   */
+  private serializeTemplate(template: Template): string {
+    const frontmatter = `---
+name: ${template.metadata.name}
+description: ${template.metadata.description || ''}
+author: ${template.metadata.author || ''}
+version: ${template.metadata.version || '1.0.0'}
+category: ${template.metadata.category || ''}
+tags: ${template.metadata.tags ? template.metadata.tags.join(', ') : ''}
+---
+
+${template.content}`;
+
+    return frontmatter;
+  }
+
   private async ensureDirectoriesExist(): Promise<void> {
     try {
       await fs.mkdir(this.userTemplatesPath, { recursive: true });
@@ -169,7 +272,9 @@ export class TemplateManager {
 
   private async loadDefaultTemplates(): Promise<void> {
     try {
+      console.log(`TemplateManager: Loading default templates from ${this.defaultTemplatesPath}`);
       await this.loadTemplatesFromDirectory(this.defaultTemplatesPath);
+      console.log(`TemplateManager: Loaded ${this.templates.size} templates from default directory`);
     } catch (error) {
       console.warn(
         'Default templates directory not found, creating basic templates'
@@ -189,12 +294,22 @@ export class TemplateManager {
   private async loadTemplatesFromDirectory(directory: string): Promise<void> {
     try {
       const files = await fs.readdir(directory);
-      const templateFiles = files.filter((file) => file.endsWith('.md'));
+      const templateFiles = files.filter((file) =>
+        file.endsWith('.md') &&
+        !file.toLowerCase().startsWith('readme') &&
+        !file.toLowerCase().startsWith('license') &&
+        !file.toLowerCase().startsWith('changelog')
+      );
 
       for (const file of templateFiles) {
         const filePath = path.join(directory, file);
         try {
           const content = await fs.readFile(filePath, 'utf-8');
+          // Check if file has frontmatter before parsing
+          if (!content.trim().startsWith('---')) {
+            console.log(`Skipping ${file} - not a template file (no frontmatter)`);
+            continue;
+          }
           const template = await this.parseTemplate(content, filePath);
           this.templates.set(template.id, template);
         } catch (error) {

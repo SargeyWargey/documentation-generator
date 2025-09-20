@@ -208,7 +208,7 @@ export class PRDGenerator {
                 { name: 'Product Manager', role: 'Strategy', responsibilities: 'Requirements and roadmap' }
             ],
             dependencies: analysisResult.dependencies?.map(dep => ({
-                name: dep.name || dep,
+                name: dep.packageName,
                 description: `External dependency used in project`,
                 type: 'library'
             })) || [],
