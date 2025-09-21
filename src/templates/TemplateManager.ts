@@ -45,10 +45,12 @@ export class TemplateManager {
       extensionContext.extensionPath,
       'templates'
     );
-    this.userTemplatesPath = path.join(
-      extensionContext.globalStorageUri?.fsPath || '',
-      'templates'
-    );
+
+    // Create global storage URI if it doesn't exist
+    const globalStoragePath = extensionContext.globalStorageUri?.fsPath ||
+      path.join(extensionContext.extensionPath, '.storage', 'global');
+
+    this.userTemplatesPath = path.join(globalStoragePath, 'templates');
   }
 
   /**
@@ -273,11 +275,30 @@ ${template.content}`;
   private async loadDefaultTemplates(): Promise<void> {
     try {
       console.log(`TemplateManager: Loading default templates from ${this.defaultTemplatesPath}`);
+
+      // Check if directory exists first
+      try {
+        await fs.access(this.defaultTemplatesPath);
+        console.log(`TemplateManager: Default templates directory exists`);
+      } catch (error) {
+        console.warn(`TemplateManager: Default templates directory not accessible: ${error}`);
+        await this.createDefaultTemplates();
+        return;
+      }
+
+      const initialCount = this.templates.size;
       await this.loadTemplatesFromDirectory(this.defaultTemplatesPath);
-      console.log(`TemplateManager: Loaded ${this.templates.size} templates from default directory`);
+      const newCount = this.templates.size;
+      console.log(`TemplateManager: Loaded ${newCount - initialCount} templates from default directory (total: ${newCount})`);
+
+      // If no templates were loaded from the directory, create defaults
+      if (newCount === initialCount) {
+        console.log('TemplateManager: No valid templates found in default directory, creating basic templates');
+        await this.createDefaultTemplates();
+      }
     } catch (error) {
       console.warn(
-        'Default templates directory not found, creating basic templates'
+        `TemplateManager: Error loading default templates: ${error}, creating basic templates`
       );
       await this.createDefaultTemplates();
     }
@@ -293,7 +314,10 @@ ${template.content}`;
 
   private async loadTemplatesFromDirectory(directory: string): Promise<void> {
     try {
+      console.log(`TemplateManager: Scanning directory ${directory} for templates`);
       const files = await fs.readdir(directory);
+      console.log(`TemplateManager: Found ${files.length} files in directory: ${files.join(', ')}`);
+
       const templateFiles = files.filter((file) =>
         file.endsWith('.md') &&
         !file.toLowerCase().startsWith('readme') &&
@@ -301,19 +325,25 @@ ${template.content}`;
         !file.toLowerCase().startsWith('changelog')
       );
 
+      console.log(`TemplateManager: Found ${templateFiles.length} potential template files: ${templateFiles.join(', ')}`);
+
       for (const file of templateFiles) {
         const filePath = path.join(directory, file);
         try {
+          console.log(`TemplateManager: Attempting to load template from ${filePath}`);
           const content = await fs.readFile(filePath, 'utf-8');
+
           // Check if file has frontmatter before parsing
           if (!content.trim().startsWith('---')) {
-            console.log(`Skipping ${file} - not a template file (no frontmatter)`);
+            console.log(`TemplateManager: Skipping ${file} - not a template file (no frontmatter)`);
             continue;
           }
+
           const template = await this.parseTemplate(content, filePath);
           this.templates.set(template.id, template);
+          console.log(`TemplateManager: Successfully loaded template "${template.metadata.name}" with ID "${template.id}"`);
         } catch (error) {
-          console.warn(`Failed to load template from ${filePath}:`, error);
+          console.warn(`TemplateManager: Failed to load template from ${filePath}:`, error);
         }
       }
     } catch (error) {

@@ -50,6 +50,18 @@ export class TemplateManagementPanel {
       null,
       this.disposables
     );
+
+    // Initialize templates on startup
+    console.log('TemplateManagementPanel: Initializing with template manager:', !!this.templateManager);
+    this.initializeTemplates();
+  }
+
+  private async initializeTemplates() {
+    // Give the webview a moment to load before sending initial templates
+    setTimeout(async () => {
+      console.log('TemplateManagementPanel: Sending initial templates to webview');
+      await this.sendTemplates();
+    }, 1000);
   }
 
   private async handleMessage(message: any) {
@@ -84,17 +96,40 @@ export class TemplateManagementPanel {
   private async sendTemplates() {
     try {
       console.log('TemplateManagementPanel: Attempting to load templates...');
+
+      // Force re-initialization if needed
+      if (!this.templateManager) {
+        throw new Error('Template manager not initialized');
+      }
+
       const templatesMap = await this.templateManager.getAllTemplates();
       const templatesArray = Array.from(templatesMap.values());
-      console.log(`TemplateManagementPanel: Loaded ${templatesArray.length} templates:`, templatesArray.map(t => t.metadata.name));
+      console.log(`TemplateManagementPanel: Loaded ${templatesArray.length} templates`);
+
+      if (templatesArray.length > 0) {
+        console.log('TemplateManagementPanel: Template details:', templatesArray.map(t => ({
+          id: t.id,
+          name: t.metadata.name,
+          category: t.metadata.category,
+          filePath: t.filePath
+        })));
+      }
 
       this.panel.webview.postMessage({
         type: 'templatesLoaded',
         templates: templatesArray
       });
+
+      console.log('TemplateManagementPanel: Sent templates to webview');
     } catch (error) {
       console.error('TemplateManagementPanel: Error loading templates:', error);
       vscode.window.showErrorMessage(`Failed to load templates: ${error}`);
+
+      // Send empty array so UI can show "no templates" state
+      this.panel.webview.postMessage({
+        type: 'templatesLoaded',
+        templates: []
+      });
     }
   }
 
