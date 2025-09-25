@@ -61,6 +61,11 @@
         "command": "documentation-generator.generateCustomDocs",
         "title": "📝 Custom Documentation",
         "icon": "$(edit)"
+      },
+      {
+        "command": "documentation-generator.manageTemplates",
+        "title": "⚙️ Manage Templates",
+        "icon": "$(settings-gear)"
       }
     ],
     "views": {

@@ -75,6 +75,9 @@ export class TemplateManagementPanel {
       case 'createTemplate':
         await this.createTemplate(message.template);
         break;
+      case 'editTemplate':
+        await this.editTemplate(message.templateId);
+        break;
       case 'updateTemplate':
         await this.updateTemplate(message.template);
         break;
@@ -150,6 +153,25 @@ export class TemplateManagementPanel {
     }
   }
 
+  private async editTemplate(templateId: string) {
+    try {
+      const template = await this.templateManager.getTemplate(templateId);
+      if (!template) {
+        throw new Error('Template not found');
+      }
+
+      // Open template file for editing
+      if (template.filePath) {
+        const document = await vscode.workspace.openTextDocument(template.filePath);
+        await vscode.window.showTextDocument(document);
+      } else {
+        vscode.window.showWarningMessage('Template file path not found. Please export and re-import this template.');
+      }
+    } catch (error) {
+      vscode.window.showErrorMessage(`Failed to edit template: ${error}`);
+    }
+  }
+
   private async updateTemplate(templateData: any) {
     try {
       await this.templateManager.saveTemplate(templateData);
@@ -199,7 +221,7 @@ export class TemplateManagementPanel {
       if (uri) {
         await vscode.workspace.fs.writeFile(
           uri,
-          Buffer.from(JSON.stringify(template, null, 2))
+          Buffer.from(JSON.stringify(template, null, 2), 'utf8')
         );
         vscode.window.showInformationMessage('Template exported successfully!');
       }
@@ -212,18 +234,39 @@ export class TemplateManagementPanel {
     try {
       const uri = await vscode.window.showOpenDialog({
         canSelectFiles: true,
-        canSelectFolders: false,
         canSelectMany: false,
         filters: {
-          'Template Files': ['json']
+          'Template Files': ['json', 'md'],
+          'All Files': ['*']
         }
       });
 
       if (uri && uri[0]) {
         const content = await vscode.workspace.fs.readFile(uri[0]);
-        const template: Template = JSON.parse(content.toString());
+        const fileContent = content.toString();
 
-        // Generate new ID to avoid conflicts
+        let template: Template;
+        if (uri[0].fsPath.endsWith('.json')) {
+          template = JSON.parse(fileContent);
+        } else {
+          // Handle markdown file import
+          const fileName = uri[0].fsPath.split('/').pop()?.replace(/\.(md|txt)$/, '') || 'imported-template';
+          template = {
+            id: Date.now().toString(),
+            metadata: {
+              name: fileName.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+              description: `Imported template from ${fileName}`,
+              author: 'Imported',
+              version: '1.0.0',
+              category: 'imported',
+              tags: ['imported']
+            },
+            content: fileContent,
+            filePath: ''
+          };
+        }
+
+        // Ensure unique ID
         template.id = Date.now().toString();
 
         await this.templateManager.saveTemplate(template);
@@ -240,12 +283,10 @@ export class TemplateManagementPanel {
   }
 
   private getWebviewContent(): string {
-    const webview = this.panel.webview;
     return `<!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} https:; style-src ${webview.cspSource} 'unsafe-inline'; script-src ${webview.cspSource} 'unsafe-inline'; font-src ${webview.cspSource} https:; connect-src ${webview.cspSource};">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Template Management</title>
     <style>
@@ -257,28 +298,20 @@ export class TemplateManagementPanel {
             margin: 0;
             padding: 20px;
         }
-
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
-            border-bottom: 1px solid var(--vscode-widget-border);
+            border-bottom: 1px solid var(--vscode-panel-border);
             padding-bottom: 15px;
         }
-
-        .header h1 {
-            margin: 0;
-            color: var(--vscode-title-foreground);
-        }
-
         .actions {
             display: flex;
             gap: 10px;
         }
-
-        button {
-            background-color: var(--vscode-button-background);
+        .btn {
+            background: var(--vscode-button-background);
             color: var(--vscode-button-foreground);
             border: none;
             padding: 8px 16px;
@@ -286,194 +319,74 @@ export class TemplateManagementPanel {
             cursor: pointer;
             font-size: 13px;
         }
-
-        button:hover {
-            background-color: var(--vscode-button-hoverBackground);
+        .btn:hover {
+            background: var(--vscode-button-hoverBackground);
         }
-
-        button.secondary {
-            background-color: var(--vscode-button-secondaryBackground);
+        .btn-secondary {
+            background: var(--vscode-button-secondaryBackground);
             color: var(--vscode-button-secondaryForeground);
         }
-
-        button.secondary:hover {
-            background-color: var(--vscode-button-secondaryHoverBackground);
+        .btn-secondary:hover {
+            background: var(--vscode-button-secondaryHoverBackground);
         }
-
-        .template-grid {
+        .templates-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 20px;
+            gap: 15px;
             margin-bottom: 20px;
         }
-
         .template-card {
-            border: 1px solid var(--vscode-widget-border);
-            border-radius: 6px;
+            background: var(--vscode-editor-background);
+            border: 1px solid var(--vscode-panel-border);
+            border-radius: 5px;
             padding: 15px;
-            background-color: var(--vscode-editor-background);
             transition: border-color 0.2s;
         }
-
         .template-card:hover {
             border-color: var(--vscode-focusBorder);
         }
-
-        .template-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: start;
-            margin-bottom: 10px;
-        }
-
         .template-title {
             font-weight: bold;
-            color: var(--vscode-title-foreground);
-            margin: 0;
+            margin-bottom: 8px;
+            color: var(--vscode-editor-foreground);
         }
-
-        .template-actions {
-            display: flex;
-            gap: 5px;
-        }
-
-        .template-actions button {
-            padding: 4px 8px;
-            font-size: 11px;
-        }
-
-        .template-description {
-            color: var(--vscode-descriptionForeground);
-            margin: 8px 0;
-            font-size: 12px;
-        }
-
         .template-meta {
-            display: flex;
-            gap: 10px;
-            font-size: 11px;
+            font-size: 12px;
             color: var(--vscode-descriptionForeground);
-            margin-top: 10px;
+            margin-bottom: 10px;
         }
-
+        .template-description {
+            font-size: 13px;
+            color: var(--vscode-editor-foreground);
+            margin-bottom: 10px;
+        }
         .template-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-            margin-top: 8px;
+            margin-bottom: 15px;
         }
-
         .tag {
-            background-color: var(--vscode-badge-background);
+            background: var(--vscode-badge-background);
             color: var(--vscode-badge-foreground);
             padding: 2px 6px;
             border-radius: 10px;
-            font-size: 10px;
+            font-size: 11px;
+            margin-right: 5px;
         }
-
-        .modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-
-        .modal-content {
-            background-color: var(--vscode-editor-background);
-            border: 1px solid var(--vscode-widget-border);
-            border-radius: 6px;
-            padding: 20px;
-            width: 90%;
-            max-width: 600px;
-            max-height: 80%;
-            overflow-y: auto;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-
-        .form-group input,
-        .form-group textarea,
-        .form-group select {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid var(--vscode-input-border);
-            background-color: var(--vscode-input-background);
-            color: var(--vscode-input-foreground);
-            border-radius: 3px;
-            font-family: inherit;
-            font-size: inherit;
-        }
-
-        .form-group textarea {
-            min-height: 200px;
-            font-family: var(--vscode-editor-font-family);
-        }
-
-        .form-actions {
+        .template-actions {
             display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            margin-top: 20px;
-            border-top: 1px solid var(--vscode-widget-border);
-            padding-top: 15px;
+            gap: 8px;
         }
-
-        .variable-list {
-            border: 1px solid var(--vscode-input-border);
-            border-radius: 3px;
-            padding: 10px;
-            background-color: var(--vscode-input-background);
+        .btn-small {
+            padding: 4px 8px;
+            font-size: 11px;
         }
-
-        .variable-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 5px 0;
-            border-bottom: 1px solid var(--vscode-widget-border);
-        }
-
-        .variable-item:last-child {
-            border-bottom: none;
-        }
-
-        .preview-container {
-            background-color: var(--vscode-textCodeBlock-background);
-            border: 1px solid var(--vscode-widget-border);
-            border-radius: 3px;
-            padding: 15px;
-            margin-top: 15px;
-            white-space: pre-wrap;
-            font-family: var(--vscode-editor-font-family);
-        }
-
         .empty-state {
             text-align: center;
             padding: 40px;
             color: var(--vscode-descriptionForeground);
         }
-
-        .empty-state h3 {
-            margin: 0 0 10px 0;
-        }
-
         .loading {
             text-align: center;
-            padding: 40px;
+            padding: 20px;
             color: var(--vscode-descriptionForeground);
         }
     </style>
@@ -482,259 +395,151 @@ export class TemplateManagementPanel {
     <div class="header">
         <h1>Template Management</h1>
         <div class="actions">
-            <button onclick="importTemplate()">Import Template</button>
-            <button onclick="createNewTemplate()">Create New Template</button>
+            <button class="btn" onclick="importTemplate()">📁 Import Template</button>
+            <button class="btn" onclick="createNewTemplate()">➕ Create New Template</button>
         </div>
     </div>
 
-    <div id="templateGrid" class="template-grid">
-        <div class="loading">Loading templates...</div>
+    <div id="loading" class="loading">Loading templates...</div>
+    <div id="templates-container" style="display: none;">
+        <div id="templates-grid" class="templates-grid"></div>
     </div>
 
-    <!-- Template Editor Modal -->
-    <div id="templateModal" class="modal">
-        <div class="modal-content">
-            <h2 id="modalTitle">Create New Template</h2>
-            <form id="templateForm">
-                <div class="form-group">
-                    <label for="templateName">Name *</label>
-                    <input type="text" id="templateName" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="templateDescription">Description</label>
-                    <textarea id="templateDescription" rows="3"></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label for="templateAuthor">Author</label>
-                    <input type="text" id="templateAuthor">
-                </div>
-
-                <div class="form-group">
-                    <label for="templateVersion">Version</label>
-                    <input type="text" id="templateVersion" placeholder="1.0.0">
-                </div>
-
-                <div class="form-group">
-                    <label for="templateCategory">Category</label>
-                    <select id="templateCategory">
-                        <option value="">Select category...</option>
-                        <option value="documentation">Documentation</option>
-                        <option value="prd">Product Requirements</option>
-                        <option value="technical">Technical Specs</option>
-                        <option value="help">Help Documentation</option>
-                        <option value="meeting">Meeting Notes</option>
-                        <option value="custom">Custom</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="templateTags">Tags (comma-separated)</label>
-                    <input type="text" id="templateTags" placeholder="tag1, tag2, tag3">
-                </div>
-
-                <div class="form-group">
-                    <label for="templateContent">Template Content *</label>
-                    <textarea id="templateContent" required placeholder="Enter your template content with variables like {{variableName}}..."></textarea>
-                </div>
-
-                <div class="form-actions">
-                    <button type="button" class="secondary" onclick="closeModal()">Cancel</button>
-                    <button type="button" onclick="previewTemplate()">Preview</button>
-                    <button type="submit">Save Template</button>
-                </div>
-            </form>
-
-            <div id="previewSection" style="display: none;">
-                <h3>Preview</h3>
-                <div id="previewContent" class="preview-container"></div>
-            </div>
-        </div>
+    <div id="empty-state" class="empty-state" style="display: none;">
+        <h3>No templates available</h3>
+        <p>Import existing templates or create new ones to get started.</p>
     </div>
 
     <script>
         const vscode = acquireVsCodeApi();
-        const debugLog = (message) => {
-            vscode.postMessage({ type: 'debugLog', message });
-        };
+        console.log('Template Management Panel script loaded');
+
         let templates = [];
-        let currentTemplate = null;
 
-        const requestTemplates = () => {
-            debugLog('Requesting templates from extension');
-            vscode.postMessage({ type: 'getTemplates' });
+        // Global functions for button handlers
+        window.importTemplate = function() {
+            console.log('Import template clicked');
+            vscode.postMessage({ type: 'importTemplate' });
         };
 
-        if (document.readyState === 'complete') {
-            requestTemplates();
-        } else {
-            window.addEventListener('load', () => {
-                debugLog('Webview load event fired');
-                requestTemplates();
+        window.createNewTemplate = function() {
+            console.log('Create new template clicked');
+            // Send basic template structure for creation
+            const newTemplate = {
+                metadata: {
+                    name: 'New Template',
+                    description: 'A new custom template',
+                    author: 'User',
+                    version: '1.0.0',
+                    category: 'custom',
+                    tags: ['custom']
+                },
+                content: '# {{title}}\n\nYour template content goes here...'
+            };
+            vscode.postMessage({
+                type: 'createTemplate',
+                template: newTemplate
             });
-        }
+        };
 
-        // Listen for messages from extension
+        window.editTemplate = function(templateId) {
+            console.log('Edit template:', templateId);
+            vscode.postMessage({
+                type: 'editTemplate',
+                templateId: templateId
+            });
+        };
+
+        window.deleteTemplate = function(templateId, templateName) {
+            if (confirm('Are you sure you want to delete template: ' + templateName + '?')) {
+                console.log('Delete template:', templateId);
+                vscode.postMessage({
+                    type: 'deleteTemplate',
+                    templateId: templateId
+                });
+            }
+        };
+
+        window.exportTemplate = function(templateId) {
+            console.log('Export template:', templateId);
+            vscode.postMessage({
+                type: 'exportTemplate',
+                templateId: templateId
+            });
+        };
+
+        window.previewTemplate = function(templateId) {
+            console.log('Preview template:', templateId);
+            vscode.postMessage({
+                type: 'previewTemplate',
+                templateId: templateId,
+                variables: {}
+            });
+        };
+
+        // Message handler
         window.addEventListener('message', event => {
             const message = event.data;
-            debugLog('Received message from extension: ' + message.type);
+            console.log('Received message:', message.type);
 
             switch (message.type) {
                 case 'templatesLoaded':
-                    templates = message.templates;
+                    templates = message.templates || [];
                     renderTemplates();
-                    break;
-                case 'templatePreview':
-                    showPreview(message.content);
                     break;
             }
         });
 
         function renderTemplates() {
-            const grid = document.getElementById('templateGrid');
+            const loadingEl = document.getElementById('loading');
+            const containerEl = document.getElementById('templates-container');
+            const emptyStateEl = document.getElementById('empty-state');
+            const gridEl = document.getElementById('templates-grid');
+
+            loadingEl.style.display = 'none';
 
             if (templates.length === 0) {
-                grid.innerHTML = '<div class="empty-state"><h3>No templates found</h3><p>Create your first template to get started.</p></div>';
+                containerEl.style.display = 'none';
+                emptyStateEl.style.display = 'block';
                 return;
             }
 
-            grid.innerHTML = templates.map(template => {
-                const tagsHtml = template.metadata.tags && template.metadata.tags.length > 0
-                    ? '<div class="template-tags">' +
-                      template.metadata.tags.map(tag => '<span class="tag">' + tag + '</span>').join('') +
-                      '</div>'
-                    : '';
+            emptyStateEl.style.display = 'none';
+            containerEl.style.display = 'block';
 
-                return '<div class="template-card">' +
-                    '<div class="template-header">' +
-                        '<h3 class="template-title">' + template.metadata.name + '</h3>' +
-                        '<div class="template-actions">' +
-                            '<button onclick="editTemplate(\'' + template.id + '\')" class="secondary">Edit</button>' +
-                            '<button onclick="exportTemplate(\'' + template.id + '\')" class="secondary">Export</button>' +
-                            '<button onclick="deleteTemplate(\'' + template.id + '\')" class="secondary">Delete</button>' +
-                        '</div>' +
-                    '</div>' +
-                    '<div class="template-description">' + (template.metadata.description || 'No description') + '</div>' +
-                    '<div class="template-meta">' +
-                        (template.metadata.author ? '<span>By: ' + template.metadata.author + '</span>' : '') +
-                        (template.metadata.version ? '<span>v' + template.metadata.version + '</span>' : '') +
-                        (template.metadata.category ? '<span>Category: ' + template.metadata.category + '</span>' : '') +
-                    '</div>' +
-                    tagsHtml +
-                '</div>';
+            gridEl.innerHTML = templates.map(template => {
+                const metadata = template.metadata || {};
+                const name = metadata.name || 'Unnamed Template';
+                const description = metadata.description || 'No description available';
+                const author = metadata.author || 'Unknown';
+                const version = metadata.version || '1.0.0';
+                const category = metadata.category || 'general';
+                const tags = metadata.tags || [];
+
+                return \`
+                <div class="template-card">
+                    <div class="template-title">\${name}</div>
+                    <div class="template-meta">
+                        Category: \${category} | Version: \${version} | Author: \${author}
+                    </div>
+                    <div class="template-description">\${description}</div>
+                    <div class="template-tags">
+                        \${tags.map(tag => \`<span class="tag">\${tag}</span>\`).join('')}
+                    </div>
+                    <div class="template-actions">
+                        <button class="btn btn-small" onclick="previewTemplate('\${template.id}')">👁 Preview</button>
+                        <button class="btn btn-small btn-secondary" onclick="editTemplate('\${template.id}')">✏️ Edit</button>
+                        <button class="btn btn-small btn-secondary" onclick="exportTemplate('\${template.id}')">📤 Export</button>
+                        <button class="btn btn-small btn-secondary" onclick="deleteTemplate('\${template.id}', '\${name}')">🗑 Delete</button>
+                    </div>
+                </div>
+                \`;
             }).join('');
         }
 
-        function createNewTemplate() {
-            currentTemplate = null;
-            document.getElementById('modalTitle').textContent = 'Create New Template';
-            document.getElementById('templateForm').reset();
-            document.getElementById('previewSection').style.display = 'none';
-            document.getElementById('templateModal').style.display = 'flex';
-        }
-
-        function editTemplate(templateId) {
-            currentTemplate = templates.find(t => t.id === templateId);
-            if (!currentTemplate) return;
-
-            document.getElementById('modalTitle').textContent = 'Edit Template';
-            document.getElementById('templateName').value = currentTemplate.metadata.name;
-            document.getElementById('templateDescription').value = currentTemplate.metadata.description || '';
-            document.getElementById('templateAuthor').value = currentTemplate.metadata.author || '';
-            document.getElementById('templateVersion').value = currentTemplate.metadata.version || '';
-            document.getElementById('templateCategory').value = currentTemplate.metadata.category || '';
-            document.getElementById('templateTags').value = currentTemplate.metadata.tags ? currentTemplate.metadata.tags.join(', ') : '';
-            document.getElementById('templateContent').value = currentTemplate.content;
-            document.getElementById('previewSection').style.display = 'none';
-            document.getElementById('templateModal').style.display = 'flex';
-        }
-
-        function closeModal() {
-            document.getElementById('templateModal').style.display = 'none';
-            currentTemplate = null;
-        }
-
-        function deleteTemplate(templateId) {
-            if (confirm('Are you sure you want to delete this template?')) {
-                debugLog('Requesting delete for template ' + templateId);
-                vscode.postMessage({ type: 'deleteTemplate', templateId });
-            }
-        }
-
-        function exportTemplate(templateId) {
-            debugLog('Requesting export for template ' + templateId);
-            vscode.postMessage({ type: 'exportTemplate', templateId });
-        }
-
-        function importTemplate() {
-            debugLog('Requesting import template dialog');
-            vscode.postMessage({ type: 'importTemplate' });
-        }
-
-        function previewTemplate() {
-            const content = document.getElementById('templateContent').value;
-            if (!content) {
-                alert('Please enter template content first.');
-                return;
-            }
-
-            // Extract variables from template content
-            const variables = {};
-            const matches = content.match(/\{\{(\w+)\}\}/g);
-            if (matches) {
-                matches.forEach(match => {
-                    const varName = match.replace(/\{\{|\}\}/g, '');
-                    variables[varName] = '[Sample ' + varName + ']';
-                });
-            }
-
-            debugLog('Requesting preview for template ' + (currentTemplate?.id || 'preview'));
-            vscode.postMessage({
-                type: 'previewTemplate',
-                templateId: currentTemplate?.id || 'preview',
-                variables
-            });
-        }
-
-        function showPreview(content) {
-            document.getElementById('previewContent').textContent = content;
-            document.getElementById('previewSection').style.display = 'block';
-        }
-
-        // Handle form submission
-        document.getElementById('templateForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-
-            const templateData = {
-                id: currentTemplate?.id || Date.now().toString(),
-                metadata: {
-                    name: document.getElementById('templateName').value,
-                    description: document.getElementById('templateDescription').value,
-                    author: document.getElementById('templateAuthor').value,
-                    version: document.getElementById('templateVersion').value,
-                    category: document.getElementById('templateCategory').value,
-                    tags: document.getElementById('templateTags').value
-                        .split(',')
-                        .map(tag => tag.trim())
-                        .filter(tag => tag.length > 0)
-                },
-                content: document.getElementById('templateContent').value,
-                filePath: currentTemplate?.filePath || ''
-            };
-
-            const messageType = currentTemplate ? 'updateTemplate' : 'createTemplate';
-            debugLog('Submitting template with action ' + messageType);
-            vscode.postMessage({ type: messageType, template: templateData });
-            closeModal();
-        });
-
-        // Close modal when clicking outside
-        document.getElementById('templateModal').addEventListener('click', (e) => {
-            if (e.target === document.getElementById('templateModal')) {
-                closeModal();
-            }
-        });
+        // Request templates on load
+        console.log('Requesting templates...');
+        vscode.postMessage({ type: 'getTemplates' });
     </script>
 </body>
 </html>`;
@@ -742,7 +547,9 @@ export class TemplateManagementPanel {
 
   public dispose() {
     TemplateManagementPanel.currentPanel = undefined;
+
     this.panel.dispose();
+
     while (this.disposables.length) {
       const disposable = this.disposables.pop();
       if (disposable) {

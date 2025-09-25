@@ -1,6 +1,6 @@
 ---
-name: "Meeting Summary"
-description: "Comprehensive meeting summary template for capturing discussions, decisions, and action items"
+name: Meeting Summary
+description: Comprehensive meeting summary template for capturing discussions, decisions, and action items
 category: "meeting"
 version: "1.0.0"
 author: "Documentation Generator"

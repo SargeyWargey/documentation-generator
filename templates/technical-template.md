@@ -1,6 +1,6 @@
 ---
-name: "Technical Specification"
-description: "Comprehensive technical specification template for system design and architecture documentation"
+name: Technical Specification
+description: Comprehensive technical specification template for system design and architecture documentation
 category: "technical"
 version: "1.0.0"
 author: "Documentation Generator"

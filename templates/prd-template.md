@@ -1,6 +1,6 @@
 ---
-name: "Product Requirements Document"
-description: "Comprehensive PRD template for product planning and stakeholder alignment"
+name: Product Requirements Document
+description: Comprehensive PRD template for product planning and stakeholder alignment
 category: "planning"
 version: "1.0.0"
 author: "Documentation Generator"

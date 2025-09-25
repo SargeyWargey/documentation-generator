@@ -1,6 +1,6 @@
 ---
-name: "Help Documentation Template"
-description: "Comprehensive user guide template for software projects"
+name: Help Documentation Template
+description: Comprehensive user guide template for software projects
 category: "documentation"
 version: "1.0.0"
 author: "Documentation Generator"
