@@ -50,32 +50,44 @@ export class GracefulDegradationService {
    * Initialize and check all dependencies
    */
   async initialize(): Promise<void> {
-    this.logger.log(LogLevel.INFO, 'Checking dependencies and feature availability');
+    this.logger.log(
+      LogLevel.INFO,
+      'Checking dependencies and feature availability'
+    );
 
-    const checkPromises = Array.from(this.dependencies.values()).map(async dep => {
-      try {
-        const available = await dep.checkFunction();
+    const checkPromises = Array.from(this.dependencies.values()).map(
+      async (dep) => {
+        try {
+          const available = await dep.checkFunction();
 
-        if (!available) {
-          this.logger.log(
-            dep.type === 'required' ? LogLevel.ERROR : LogLevel.WARN,
-            `Dependency not available: ${dep.name}`,
-            { type: dep.type, description: dep.description }
-          );
+          if (!available) {
+            this.logger.log(
+              dep.type === 'required' ? LogLevel.ERROR : LogLevel.WARN,
+              `Dependency not available: ${dep.name}`,
+              { type: dep.type, description: dep.description }
+            );
 
-          if (dep.type === 'required' && !dep.fallbackStrategy) {
-            this.degradationMode = true;
+            if (dep.type === 'required' && !dep.fallbackStrategy) {
+              this.degradationMode = true;
+            }
+          } else {
+            this.logger.log(
+              LogLevel.DEBUG,
+              `Dependency available: ${dep.name}`
+            );
           }
-        } else {
-          this.logger.log(LogLevel.DEBUG, `Dependency available: ${dep.name}`);
-        }
 
-        return { name: dep.name, available, dependency: dep };
-      } catch (error) {
-        this.logger.log(LogLevel.ERROR, `Error checking dependency: ${dep.name}`, { error });
-        return { name: dep.name, available: false, dependency: dep };
+          return { name: dep.name, available, dependency: dep };
+        } catch (error) {
+          this.logger.log(
+            LogLevel.ERROR,
+            `Error checking dependency: ${dep.name}`,
+            { error }
+          );
+          return { name: dep.name, available: false, dependency: dep };
+        }
       }
-    });
+    );
 
     const results = await Promise.all(checkPromises);
 
@@ -83,7 +95,10 @@ export class GracefulDegradationService {
     await this.updateFeatureAvailability(results);
 
     if (this.degradationMode) {
-      this.logger.log(LogLevel.WARN, 'Running in degradation mode due to missing required dependencies');
+      this.logger.log(
+        LogLevel.WARN,
+        'Running in degradation mode due to missing required dependencies'
+      );
       await this.notifyUserOfDegradation();
     }
   }
@@ -118,32 +133,47 @@ export class GracefulDegradationService {
       try {
         return await primaryFunction();
       } catch (error) {
-        this.logger.log(LogLevel.ERROR, `Primary function failed for feature: ${featureName}`, { error });
+        this.logger.log(
+          LogLevel.ERROR,
+          `Primary function failed for feature: ${featureName}`,
+          { error }
+        );
 
         // Try fallback if available
         if (fallbackFunction) {
-          this.logger.log(LogLevel.INFO, `Using fallback for feature: ${featureName}`);
+          this.logger.log(
+            LogLevel.INFO,
+            `Using fallback for feature: ${featureName}`
+          );
           return await fallbackFunction();
         }
       }
     } else {
       this.logger.log(LogLevel.WARN, `Feature not available: ${featureName}`, {
         reason: feature?.reason,
-        alternatives: feature?.alternatives
+        alternatives: feature?.alternatives,
       });
 
       if (fallbackFunction) {
-        this.logger.log(LogLevel.INFO, `Using fallback for unavailable feature: ${featureName}`);
+        this.logger.log(
+          LogLevel.INFO,
+          `Using fallback for unavailable feature: ${featureName}`
+        );
         return await fallbackFunction();
       }
     }
 
     if (fallbackValue !== undefined) {
-      this.logger.log(LogLevel.INFO, `Using fallback value for feature: ${featureName}`);
+      this.logger.log(
+        LogLevel.INFO,
+        `Using fallback value for feature: ${featureName}`
+      );
       return fallbackValue;
     }
 
-    throw new Error(`Feature '${featureName}' is not available and no fallback provided`);
+    throw new Error(
+      `Feature '${featureName}' is not available and no fallback provided`
+    );
   }
 
   /**
@@ -166,7 +196,11 @@ export class GracefulDegradationService {
     try {
       return await dependency.checkFunction();
     } catch (error) {
-      this.logger.log(LogLevel.ERROR, `Error checking dependency: ${dependencyName}`, { error });
+      this.logger.log(
+        LogLevel.ERROR,
+        `Error checking dependency: ${dependencyName}`,
+        { error }
+      );
       return false;
     }
   }
@@ -181,7 +215,9 @@ export class GracefulDegradationService {
     }
 
     if (!dependency.installInstructions) {
-      throw new Error(`No installation instructions available for: ${dependencyName}`);
+      throw new Error(
+        `No installation instructions available for: ${dependencyName}`
+      );
     }
 
     // Show installation instructions to user
@@ -199,7 +235,8 @@ export class GracefulDegradationService {
         { enableScripts: false }
       );
 
-      instructionsPanel.webview.html = this.generateInstallInstructionsHTML(dependency);
+      instructionsPanel.webview.html =
+        this.generateInstallInstructionsHTML(dependency);
     }
 
     return false; // Manual installation required
@@ -210,7 +247,10 @@ export class GracefulDegradationService {
    */
   registerDependency(dependency: DependencyInfo): void {
     this.dependencies.set(dependency.name, dependency);
-    this.logger.log(LogLevel.DEBUG, `Registered dependency: ${dependency.name}`);
+    this.logger.log(
+      LogLevel.DEBUG,
+      `Registered dependency: ${dependency.name}`
+    );
   }
 
   /**
@@ -243,12 +283,13 @@ export class GracefulDegradationService {
     this.registerDependency({
       name: 'claude-code-pro',
       type: 'required',
-      description: 'Claude Code Pro subscription for advanced document generation',
+      description:
+        'Claude Code Pro subscription for advanced document generation',
       checkFunction: async () => {
         // Check if Claude Code Pro is available
         try {
           const claudeCommands = await vscode.commands.getCommands();
-          return claudeCommands.some(cmd => cmd.startsWith('claude.'));
+          return claudeCommands.some((cmd) => cmd.startsWith('claude.'));
         } catch {
           return false;
         }
@@ -263,11 +304,15 @@ export class GracefulDegradationService {
         limitations: [
           'No AI-powered content generation',
           'Limited context analysis',
-          'Template-only output'
-        ]
+          'Template-only output',
+        ],
       },
-      installInstructions: 'Please ensure you have Claude Code Pro subscription and the Claude extension installed.',
-      alternativeFeatures: ['manual-template-processing', 'static-documentation']
+      installInstructions:
+        'Please ensure you have Claude Code Pro subscription and the Claude extension installed.',
+      alternativeFeatures: [
+        'manual-template-processing',
+        'static-documentation',
+      ],
     });
 
     // Node.js modules availability
@@ -289,8 +334,8 @@ export class GracefulDegradationService {
         implementation: async () => {
           // Use VS Code workspace API instead of direct fs operations
           return vscode.workspace;
-        }
-      }
+        },
+      },
     });
 
     // Git availability
@@ -310,7 +355,10 @@ export class GracefulDegradationService {
           return false;
         }
       },
-      alternativeFeatures: ['manual-version-info', 'timestamp-based-versioning']
+      alternativeFeatures: [
+        'manual-version-info',
+        'timestamp-based-versioning',
+      ],
     });
 
     // TypeScript compiler availability
@@ -320,7 +368,9 @@ export class GracefulDegradationService {
       description: 'TypeScript compiler for enhanced code analysis',
       checkFunction: async () => {
         try {
-          const tsExtension = vscode.extensions.getExtension('ms-vscode.vscode-typescript-next');
+          const tsExtension = vscode.extensions.getExtension(
+            'ms-vscode.vscode-typescript-next'
+          );
           return tsExtension?.isActive ?? false;
         } catch {
           return false;
@@ -328,7 +378,8 @@ export class GracefulDegradationService {
       },
       fallbackStrategy: {
         name: 'basic-file-analysis',
-        description: 'Use basic file content analysis without TypeScript parsing',
+        description:
+          'Use basic file content analysis without TypeScript parsing',
         implementation: async () => {
           // Implement basic text-based analysis
           return 'Basic file analysis';
@@ -336,10 +387,10 @@ export class GracefulDegradationService {
         limitations: [
           'No type information',
           'Limited symbol resolution',
-          'Basic syntax analysis only'
-        ]
+          'Basic syntax analysis only',
+        ],
       },
-      alternativeFeatures: ['text-based-analysis', 'pattern-matching-analysis']
+      alternativeFeatures: ['text-based-analysis', 'pattern-matching-analysis'],
     });
 
     // Workspace access
@@ -360,16 +411,24 @@ export class GracefulDegradationService {
         limitations: [
           'Cannot analyze project structure',
           'Limited context gathering',
-          'File-by-file processing only'
-        ]
+          'File-by-file processing only',
+        ],
       },
-      installInstructions: 'Please open a folder or workspace in VS Code to use this extension.',
-      alternativeFeatures: ['single-file-documentation', 'manual-file-selection']
+      installInstructions:
+        'Please open a folder or workspace in VS Code to use this extension.',
+      alternativeFeatures: [
+        'single-file-documentation',
+        'manual-file-selection',
+      ],
     });
   }
 
   private async updateFeatureAvailability(
-    dependencyResults: Array<{ name: string; available: boolean; dependency: DependencyInfo }>
+    dependencyResults: Array<{
+      name: string;
+      available: boolean;
+      dependency: DependencyInfo;
+    }>
   ): Promise<void> {
     // Define feature dependencies
     const featureDependencies = {
@@ -379,22 +438,28 @@ export class GracefulDegradationService {
       'git-integration': ['git'],
       'advanced-templates': ['claude-code-pro', 'workspace-access'],
       'basic-templates': ['node-modules'],
-      'file-operations': ['node-modules']
+      'file-operations': ['node-modules'],
     };
 
     for (const [feature, deps] of Object.entries(featureDependencies)) {
-      const requiredDeps = deps.map(depName => {
-        const result = dependencyResults.find(r => r.name === depName);
-        return result || { name: depName, available: false, dependency: this.dependencies.get(depName)! };
+      const requiredDeps = deps.map((depName) => {
+        const result = dependencyResults.find((r) => r.name === depName);
+        return (
+          result || {
+            name: depName,
+            available: false,
+            dependency: this.dependencies.get(depName)!,
+          }
+        );
       });
 
-      const unavailableDeps = requiredDeps.filter(dep => !dep.available);
+      const unavailableDeps = requiredDeps.filter((dep) => !dep.available);
       const available = unavailableDeps.length === 0;
 
       const alternatives: string[] = [];
       if (!available) {
         // Collect alternatives from unavailable dependencies
-        unavailableDeps.forEach(dep => {
+        unavailableDeps.forEach((dep) => {
           if (dep.dependency.alternativeFeatures) {
             alternatives.push(...dep.dependency.alternativeFeatures);
           }
@@ -404,16 +469,19 @@ export class GracefulDegradationService {
       this.featureAvailability.set(feature, {
         feature,
         available,
-        reason: available ? undefined : `Missing dependencies: ${unavailableDeps.map(d => d.name).join(', ')}`,
-        alternatives: alternatives.length > 0 ? [...new Set(alternatives)] : undefined
+        reason: available
+          ? undefined
+          : `Missing dependencies: ${unavailableDeps.map((d) => d.name).join(', ')}`,
+        alternatives:
+          alternatives.length > 0 ? [...new Set(alternatives)] : undefined,
       });
     }
   }
 
   private async notifyUserOfDegradation(): Promise<void> {
     const unavailableFeatures = Array.from(this.featureAvailability.values())
-      .filter(f => !f.available)
-      .map(f => f.feature);
+      .filter((f) => !f.available)
+      .map((f) => f.feature);
 
     if (unavailableFeatures.length === 0) return;
 
@@ -506,20 +574,28 @@ export class GracefulDegradationService {
         <h1>Feature Availability Status</h1>
         <p>This panel shows which features are currently available and what alternatives exist for unavailable features.</p>
 
-        ${features.map(feature => `
+        ${features
+          .map(
+            (feature) => `
             <div class="feature ${feature.available ? 'available' : 'unavailable'}">
                 <h3>${feature.feature} ${feature.available ? '✅' : '❌'}</h3>
                 ${feature.reason ? `<p><strong>Reason:</strong> ${feature.reason}</p>` : ''}
-                ${feature.alternatives ? `
+                ${
+                  feature.alternatives
+                    ? `
                     <div class="alternatives">
                         <strong>Alternatives:</strong>
                         <ul>
-                            ${feature.alternatives.map(alt => `<li>${alt}</li>`).join('')}
+                            ${feature.alternatives.map((alt) => `<li>${alt}</li>`).join('')}
                         </ul>
                     </div>
-                ` : ''}
+                `
+                    : ''
+                }
             </div>
-        `).join('')}
+        `
+          )
+          .join('')}
     </body>
     </html>
     `;
@@ -570,21 +646,29 @@ export class GracefulDegradationService {
         <h1>Dependency Installation Guide</h1>
         <p>Follow these instructions to install missing dependencies and enable full functionality.</p>
 
-        ${dependencies.map(dep => `
+        ${dependencies
+          .map(
+            (dep) => `
             <div class="dependency">
                 <h3>
                     ${dep.name}
                     <span class="type-badge ${dep.type.replace('-', '')}">${dep.type}</span>
                 </h3>
                 <p>${dep.description}</p>
-                ${dep.installInstructions ? `
+                ${
+                  dep.installInstructions
+                    ? `
                     <div class="instructions">
                         <strong>Installation:</strong><br>
                         ${dep.installInstructions}
                     </div>
-                ` : '<p><em>No installation instructions available</em></p>'}
+                `
+                    : '<p><em>No installation instructions available</em></p>'
+                }
             </div>
-        `).join('')}
+        `
+          )
+          .join('')}
     </body>
     </html>
     `;
@@ -621,13 +705,17 @@ export class GracefulDegradationService {
             ${dependency.installInstructions || 'No installation instructions available'}
         </div>
 
-        ${dependency.alternativeFeatures ? `
+        ${
+          dependency.alternativeFeatures
+            ? `
             <h2>Alternative Features</h2>
             <p>If you cannot install this dependency, the following features may be available as alternatives:</p>
             <ul>
-                ${dependency.alternativeFeatures.map(alt => `<li>${alt}</li>`).join('')}
+                ${dependency.alternativeFeatures.map((alt) => `<li>${alt}</li>`).join('')}
             </ul>
-        ` : ''}
+        `
+            : ''
+        }
     </body>
     </html>
     `;

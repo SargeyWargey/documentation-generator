@@ -1,4 +1,8 @@
-import { TemplateManager, Template, TemplateMetadata } from '../TemplateManager';
+import {
+  TemplateManager,
+  Template,
+  TemplateMetadata,
+} from '../TemplateManager';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
@@ -143,7 +147,8 @@ Priority: {{priority}}
     });
 
     it('should get templates by category', async () => {
-      const planningTemplates = templateManager.getTemplatesByCategory('planning');
+      const planningTemplates =
+        templateManager.getTemplatesByCategory('planning');
       expect(planningTemplates).toHaveLength(2); // default + user
       expect(planningTemplates[0].metadata.category).toBe('planning');
     });
@@ -151,7 +156,7 @@ Priority: {{priority}}
     it('should process template with variables', async () => {
       const result = await templateManager.processTemplate('prd-template', {
         productName: 'Test Product',
-        priority: 'High'
+        priority: 'High',
       });
 
       expect(result).toContain('Test Product');
@@ -159,7 +164,9 @@ Priority: {{priority}}
     });
 
     it('should handle template processing errors', async () => {
-      await expect(templateManager.processTemplate('non-existent', {})).rejects.toThrow();
+      await expect(
+        templateManager.processTemplate('non-existent', {})
+      ).rejects.toThrow();
     });
 
     it('should search templates', () => {
@@ -236,7 +243,10 @@ invalid: yaml: structure: here
 
     it('should handle file read errors gracefully', async () => {
       mockFs.readdir.mockResolvedValue(['template.md'] as any);
-      mockFs.stat.mockResolvedValue({ isDirectory: () => false, mtime: new Date() } as any);
+      mockFs.stat.mockResolvedValue({
+        isDirectory: () => false,
+        mtime: new Date(),
+      } as any);
       mockFs.readFile.mockRejectedValue(new Error('File read failed'));
 
       await expect(templateManager.initialize()).resolves.not.toThrow();

@@ -40,7 +40,12 @@ export interface MigrationPlan {
 }
 
 export interface MigrationStep {
-  type: 'variable_rename' | 'variable_add' | 'variable_remove' | 'content_change' | 'metadata_change';
+  type:
+    | 'variable_rename'
+    | 'variable_add'
+    | 'variable_remove'
+    | 'content_change'
+    | 'metadata_change';
   description: string;
   oldValue?: any;
   newValue?: any;
@@ -52,7 +57,10 @@ export class TemplateVersionManager {
   private validator: TemplateValidator;
   private readonly versionsDirectory: string;
 
-  constructor(templateManager: TemplateManager, extensionContext: vscode.ExtensionContext) {
+  constructor(
+    templateManager: TemplateManager,
+    extensionContext: vscode.ExtensionContext
+  ) {
     this.templateManager = templateManager;
     this.validator = new TemplateValidator();
     this.versionsDirectory = path.join(
@@ -96,17 +104,25 @@ export class TemplateVersionManager {
     const history = await this.getVersionHistory(templateId);
 
     // Check if version already exists
-    if (history.versions.some(v => v.version === newVersion)) {
+    if (history.versions.some((v) => v.version === newVersion)) {
       throw new Error(`Version '${newVersion}' already exists`);
     }
 
     // Validate that new version is greater than current
-    if (history.currentVersion && !this.isNewerVersion(newVersion, history.currentVersion)) {
-      throw new Error(`New version '${newVersion}' must be greater than current version '${history.currentVersion}'`);
+    if (
+      history.currentVersion &&
+      !this.isNewerVersion(newVersion, history.currentVersion)
+    ) {
+      throw new Error(
+        `New version '${newVersion}' must be greater than current version '${history.currentVersion}'`
+      );
     }
 
     // Detect deprecated features
-    const deprecatedFeatures = await this.detectDeprecatedFeatures(template, history);
+    const deprecatedFeatures = await this.detectDeprecatedFeatures(
+      template,
+      history
+    );
 
     // Create new version
     const templateVersion: TemplateVersion = {
@@ -117,7 +133,7 @@ export class TemplateVersionManager {
       createdBy: await this.getCurrentUser(),
       isBreaking,
       deprecatedFeatures,
-      migrationNotes
+      migrationNotes,
     };
 
     // Update history
@@ -152,7 +168,7 @@ export class TemplateVersionManager {
         templateId,
         versions: [],
         currentVersion: '1.0.0',
-        latestStableVersion: '1.0.0'
+        latestStableVersion: '1.0.0',
       };
     }
   }
@@ -172,18 +188,22 @@ export class TemplateVersionManager {
     const latestVersion = history.currentVersion;
 
     const hasUpdates = this.isNewerVersion(latestVersion, currentVersion);
-    const versionsBehind = this.calculateVersionsBehind(currentVersion, latestVersion, history.versions);
+    const versionsBehind = this.calculateVersionsBehind(
+      currentVersion,
+      latestVersion,
+      history.versions
+    );
 
     // Check if any updates are breaking
     const isBreakingUpdate = history.versions
-      .filter(v => this.isNewerVersion(v.version, currentVersion))
-      .some(v => v.isBreaking);
+      .filter((v) => this.isNewerVersion(v.version, currentVersion))
+      .some((v) => v.isBreaking);
 
     // Collect changelog for all versions between current and latest
     const changelog = history.versions
-      .filter(v => this.isNewerVersion(v.version, currentVersion))
+      .filter((v) => this.isNewerVersion(v.version, currentVersion))
       .sort((a, b) => this.compareVersions(a.version, b.version))
-      .map(v => `${v.version}: ${v.changelog}`);
+      .map((v) => `${v.version}: ${v.changelog}`);
 
     return {
       hasUpdates,
@@ -191,14 +211,17 @@ export class TemplateVersionManager {
       latestVersion,
       versionsBehind,
       isBreakingUpdate,
-      changelog
+      changelog,
     };
   }
 
   /**
    * Update a template to a specific version
    */
-  async updateTemplate(templateId: string, targetVersion: string): Promise<MigrationPlan | null> {
+  async updateTemplate(
+    templateId: string,
+    targetVersion: string
+  ): Promise<MigrationPlan | null> {
     const history = await this.getVersionHistory(templateId);
     const currentTemplate = this.templateManager.getTemplate(templateId);
 
@@ -206,7 +229,9 @@ export class TemplateVersionManager {
       throw new Error(`Template '${templateId}' not found`);
     }
 
-    const targetVersionData = history.versions.find(v => v.version === targetVersion);
+    const targetVersionData = history.versions.find(
+      (v) => v.version === targetVersion
+    );
     if (!targetVersionData) {
       throw new Error(`Version '${targetVersion}' not found`);
     }
@@ -222,7 +247,10 @@ export class TemplateVersionManager {
     );
 
     // If migration required, show plan to user
-    if (!migrationPlan.isBackwardCompatible && migrationPlan.requiredActions.length > 0) {
+    if (
+      !migrationPlan.isBackwardCompatible &&
+      migrationPlan.requiredActions.length > 0
+    ) {
       const proceed = await this.showMigrationPlan(migrationPlan);
       if (!proceed) {
         return migrationPlan; // Return plan but don't execute
@@ -230,7 +258,11 @@ export class TemplateVersionManager {
     }
 
     // Execute migration
-    await this.executeMigration(templateId, targetVersionData.template, migrationPlan);
+    await this.executeMigration(
+      templateId,
+      targetVersionData.template,
+      migrationPlan
+    );
 
     return null; // Migration completed successfully
   }
@@ -238,9 +270,14 @@ export class TemplateVersionManager {
   /**
    * Rollback to a previous version
    */
-  async rollbackTemplate(templateId: string, targetVersion: string): Promise<void> {
+  async rollbackTemplate(
+    templateId: string,
+    targetVersion: string
+  ): Promise<void> {
     const history = await this.getVersionHistory(templateId);
-    const targetVersionData = history.versions.find(v => v.version === targetVersion);
+    const targetVersionData = history.versions.find(
+      (v) => v.version === targetVersion
+    );
 
     if (!targetVersionData) {
       throw new Error(`Version '${targetVersion}' not found`);
@@ -261,7 +298,9 @@ export class TemplateVersionManager {
       history.currentVersion = targetVersion;
       await this.saveVersionHistory(templateId, history);
 
-      vscode.window.showInformationMessage(`Template '${templateId}' rolled back to version '${targetVersion}'`);
+      vscode.window.showInformationMessage(
+        `Template '${templateId}' rolled back to version '${targetVersion}'`
+      );
     }
   }
 
@@ -276,15 +315,15 @@ export class TemplateVersionManager {
       return;
     }
 
-    const templateItems = templates.map(t => ({
+    const templateItems = templates.map((t) => ({
       label: t.metadata.name,
       description: `Version: ${t.metadata.version || '1.0.0'}`,
       detail: t.metadata.description,
-      template: t
+      template: t,
     }));
 
     const selected = await vscode.window.showQuickPick(templateItems, {
-      placeHolder: 'Select a template to manage versions'
+      placeHolder: 'Select a template to manage versions',
     });
 
     if (selected) {
@@ -302,25 +341,25 @@ export class TemplateVersionManager {
       {
         label: '$(tag) Create New Version',
         description: 'Create a new version of this template',
-        action: 'create'
+        action: 'create',
       },
       {
         label: '$(history) View Version History',
         description: 'See all versions of this template',
-        action: 'history'
-      }
+        action: 'history',
+      },
     ];
 
     if (updateInfo.hasUpdates) {
       actions.unshift({
         label: `$(cloud-download) Update Available (${updateInfo.latestVersion})`,
         description: `${updateInfo.versionsBehind} version(s) behind`,
-        action: 'update'
+        action: 'update',
       });
     }
 
     const selected = await vscode.window.showQuickPick(actions, {
-      placeHolder: `Manage versions for '${template.metadata.name}'`
+      placeHolder: `Manage versions for '${template.metadata.name}'`,
     });
 
     if (!selected) return;
@@ -358,22 +397,30 @@ export class TemplateVersionManager {
           return `Version must be greater than current version (${currentVersion})`;
         }
         return undefined;
-      }
+      },
     });
 
     if (!newVersion) return;
 
     const changelog = await vscode.window.showInputBox({
       prompt: 'Enter changelog for this version',
-      placeHolder: 'Describe what changed in this version'
+      placeHolder: 'Describe what changed in this version',
     });
 
     if (!changelog) return;
 
     const isBreaking = await vscode.window.showQuickPick(
       [
-        { label: 'No', detail: 'This is a backward-compatible update', value: false },
-        { label: 'Yes', detail: 'This update contains breaking changes', value: true }
+        {
+          label: 'No',
+          detail: 'This is a backward-compatible update',
+          value: false,
+        },
+        {
+          label: 'Yes',
+          detail: 'This update contains breaking changes',
+          value: true,
+        },
       ],
       { placeHolder: 'Does this version contain breaking changes?' }
     );
@@ -384,13 +431,21 @@ export class TemplateVersionManager {
     if (isBreaking.value) {
       migrationNotes = await vscode.window.showInputBox({
         prompt: 'Enter migration notes for breaking changes',
-        placeHolder: 'Explain how to migrate from the previous version'
+        placeHolder: 'Explain how to migrate from the previous version',
       });
     }
 
     try {
-      await this.createVersion(template.id, newVersion, changelog, isBreaking.value, migrationNotes);
-      vscode.window.showInformationMessage(`Version '${newVersion}' created successfully`);
+      await this.createVersion(
+        template.id,
+        newVersion,
+        changelog,
+        isBreaking.value,
+        migrationNotes
+      );
+      vscode.window.showInformationMessage(
+        `Version '${newVersion}' created successfully`
+      );
     } catch (error) {
       vscode.window.showErrorMessage(`Failed to create version: ${error}`);
     }
@@ -409,22 +464,34 @@ export class TemplateVersionManager {
 
     const action = await vscode.window.showInformationMessage(
       message,
-      ...(updateInfo.isBreakingUpdate ? ['Show Migration Plan', 'Update Anyway', 'Cancel'] : ['Update', 'Show Changelog', 'Cancel'])
+      ...(updateInfo.isBreakingUpdate
+        ? ['Show Migration Plan', 'Update Anyway', 'Cancel']
+        : ['Update', 'Show Changelog', 'Cancel'])
     );
 
     if (action === 'Update' || action === 'Update Anyway') {
       try {
-        const migrationPlan = await this.updateTemplate(template.id, updateInfo.latestVersion);
+        const migrationPlan = await this.updateTemplate(
+          template.id,
+          updateInfo.latestVersion
+        );
         if (!migrationPlan) {
-          vscode.window.showInformationMessage(`Template updated to version ${updateInfo.latestVersion}`);
+          vscode.window.showInformationMessage(
+            `Template updated to version ${updateInfo.latestVersion}`
+          );
         }
       } catch (error) {
         vscode.window.showErrorMessage(`Update failed: ${error}`);
       }
-    } else if (action === 'Show Migration Plan' || action === 'Show Changelog') {
+    } else if (
+      action === 'Show Migration Plan' ||
+      action === 'Show Changelog'
+    ) {
       // Show detailed changelog
       const changelogText = updateInfo.changelog.join('\n\n');
-      await vscode.window.showInformationMessage(changelogText, { modal: true });
+      await vscode.window.showInformationMessage(changelogText, {
+        modal: true,
+      });
     }
   }
 
@@ -436,21 +503,21 @@ export class TemplateVersionManager {
 
     const versionItems = history.versions
       .sort((a, b) => this.compareVersions(b.version, a.version)) // Newest first
-      .map(v => ({
+      .map((v) => ({
         label: `${v.version} ${v.version === history.currentVersion ? '(current)' : ''}`,
         description: v.changelog,
         detail: `${v.createdAt.split('T')[0]} by ${v.createdBy}${v.isBreaking ? ' • Breaking' : ''}`,
-        version: v
+        version: v,
       }));
 
     const selected = await vscode.window.showQuickPick(versionItems, {
-      placeHolder: 'Select a version to view or rollback'
+      placeHolder: 'Select a version to view or rollback',
     });
 
     if (selected && selected.version.version !== history.currentVersion) {
       const action = await vscode.window.showQuickPick([
         { label: 'Rollback to this version', action: 'rollback' },
-        { label: 'View version details', action: 'view' }
+        { label: 'View version details', action: 'view' },
       ]);
 
       if (action?.action === 'rollback') {
@@ -472,18 +539,24 @@ export class TemplateVersionManager {
       `Breaking: ${version.isBreaking ? 'Yes' : 'No'}`,
       '',
       'Changelog:',
-      version.changelog
+      version.changelog,
     ];
 
     if (version.deprecatedFeatures && version.deprecatedFeatures.length > 0) {
-      details.push('', 'Deprecated Features:', ...version.deprecatedFeatures.map(f => `• ${f}`));
+      details.push(
+        '',
+        'Deprecated Features:',
+        ...version.deprecatedFeatures.map((f) => `• ${f}`)
+      );
     }
 
     if (version.migrationNotes) {
       details.push('', 'Migration Notes:', version.migrationNotes);
     }
 
-    await vscode.window.showInformationMessage(details.join('\n'), { modal: true });
+    await vscode.window.showInformationMessage(details.join('\n'), {
+      modal: true,
+    });
   }
 
   /**
@@ -503,45 +576,47 @@ export class TemplateVersionManager {
     const toVars = toTemplate.metadata.variables || [];
 
     // Detect variable changes
-    const fromVarNames = new Set(fromVars.map(v => v.name));
-    const toVarNames = new Set(toVars.map(v => v.name));
+    const fromVarNames = new Set(fromVars.map((v) => v.name));
+    const toVarNames = new Set(toVars.map((v) => v.name));
 
     // Removed variables
-    fromVarNames.forEach(name => {
+    fromVarNames.forEach((name) => {
       if (!toVarNames.has(name)) {
         steps.push({
           type: 'variable_remove',
           description: `Variable '${name}' has been removed`,
           oldValue: name,
-          automatic: false
+          automatic: false,
         });
-        requiredActions.push(`Remove usage of variable '${name}' from your content`);
+        requiredActions.push(
+          `Remove usage of variable '${name}' from your content`
+        );
       }
     });
 
     // Added variables
-    toVarNames.forEach(name => {
+    toVarNames.forEach((name) => {
       if (!fromVarNames.has(name)) {
-        const newVar = toVars.find(v => v.name === name);
+        const newVar = toVars.find((v) => v.name === name);
         steps.push({
           type: 'variable_add',
           description: `Variable '${name}' has been added`,
           newValue: newVar,
-          automatic: true
+          automatic: true,
         });
       }
     });
 
     // Changed variables
-    fromVars.forEach(fromVar => {
-      const toVar = toVars.find(v => v.name === fromVar.name);
+    fromVars.forEach((fromVar) => {
+      const toVar = toVars.find((v) => v.name === fromVar.name);
       if (toVar && JSON.stringify(fromVar) !== JSON.stringify(toVar)) {
         steps.push({
           type: 'variable_rename',
           description: `Variable '${fromVar.name}' has been modified`,
           oldValue: fromVar,
           newValue: toVar,
-          automatic: false
+          automatic: false,
         });
         requiredActions.push(`Review changes to variable '${fromVar.name}'`);
       }
@@ -552,7 +627,7 @@ export class TemplateVersionManager {
       steps.push({
         type: 'content_change',
         description: 'Template content has been updated',
-        automatic: true
+        automatic: true,
       });
     }
 
@@ -563,7 +638,7 @@ export class TemplateVersionManager {
       toVersion,
       steps,
       isBackwardCompatible,
-      requiredActions
+      requiredActions,
     };
   }
 
@@ -575,11 +650,15 @@ export class TemplateVersionManager {
       `Migration from ${plan.fromVersion} to ${plan.toVersion}`,
       '',
       'Changes:',
-      ...plan.steps.map(s => `• ${s.description}`)
+      ...plan.steps.map((s) => `• ${s.description}`),
     ];
 
     if (plan.requiredActions.length > 0) {
-      details.push('', 'Required Actions:', ...plan.requiredActions.map(a => `• ${a}`));
+      details.push(
+        '',
+        'Required Actions:',
+        ...plan.requiredActions.map((a) => `• ${a}`)
+      );
     }
 
     const result = await vscode.window.showWarningMessage(
@@ -595,7 +674,11 @@ export class TemplateVersionManager {
   /**
    * Execute migration plan
    */
-  private async executeMigration(_templateId: string, newTemplate: Template, plan: MigrationPlan): Promise<void> {
+  private async executeMigration(
+    _templateId: string,
+    newTemplate: Template,
+    plan: MigrationPlan
+  ): Promise<void> {
     // Update template in manager
     await this.updateTemplateInManager(newTemplate);
 
@@ -636,10 +719,15 @@ export class TemplateVersionManager {
     return 0;
   }
 
-  private calculateVersionsBehind(current: string, latest: string, versions: TemplateVersion[]): number {
-    const versionsInBetween = versions.filter(v =>
-      this.isNewerVersion(v.version, current) &&
-      (this.compareVersions(v.version, latest) <= 0)
+  private calculateVersionsBehind(
+    current: string,
+    latest: string,
+    versions: TemplateVersion[]
+  ): number {
+    const versionsInBetween = versions.filter(
+      (v) =>
+        this.isNewerVersion(v.version, current) &&
+        this.compareVersions(v.version, latest) <= 0
     );
     return versionsInBetween.length;
   }
@@ -650,7 +738,10 @@ export class TemplateVersionManager {
     return parts.join('.');
   }
 
-  private async detectDeprecatedFeatures(_template: Template, _history: VersionHistory): Promise<string[]> {
+  private async detectDeprecatedFeatures(
+    _template: Template,
+    _history: VersionHistory
+  ): Promise<string[]> {
     // This would analyze the template for deprecated patterns
     // For now, return empty array
     return [];
@@ -668,7 +759,10 @@ export class TemplateVersionManager {
     }
   }
 
-  private async saveVersionHistory(templateId: string, history: VersionHistory): Promise<void> {
+  private async saveVersionHistory(
+    templateId: string,
+    history: VersionHistory
+  ): Promise<void> {
     const historyFile = path.join(this.versionsDirectory, `${templateId}.json`);
     await fs.writeFile(historyFile, JSON.stringify(history, null, 2));
   }

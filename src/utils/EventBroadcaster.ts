@@ -41,8 +41,16 @@ export class EventBroadcaster extends EventEmitter {
   // Folder selection events
   broadcastFolderSelection(event: FolderSelectionEvent): void {
     this.emit('folderSelected', event);
-    vscode.commands.executeCommand('setContext', 'documentationGenerator.folderSelected', true);
-    vscode.commands.executeCommand('setContext', 'documentationGenerator.selectedFolderPath', event.folderPath);
+    vscode.commands.executeCommand(
+      'setContext',
+      'documentationGenerator.folderSelected',
+      true
+    );
+    vscode.commands.executeCommand(
+      'setContext',
+      'documentationGenerator.selectedFolderPath',
+      event.folderPath
+    );
   }
 
   onFolderSelection(listener: (event: FolderSelectionEvent) => void): void {
@@ -52,8 +60,16 @@ export class EventBroadcaster extends EventEmitter {
   // Template selection events
   broadcastTemplateSelection(event: TemplateSelectionEvent): void {
     this.emit('templateSelected', event);
-    vscode.commands.executeCommand('setContext', 'documentationGenerator.templateSelected', true);
-    vscode.commands.executeCommand('setContext', 'documentationGenerator.selectedTemplateId', event.templateId);
+    vscode.commands.executeCommand(
+      'setContext',
+      'documentationGenerator.templateSelected',
+      true
+    );
+    vscode.commands.executeCommand(
+      'setContext',
+      'documentationGenerator.selectedTemplateId',
+      event.templateId
+    );
   }
 
   onTemplateSelection(listener: (event: TemplateSelectionEvent) => void): void {
@@ -70,7 +86,10 @@ export class EventBroadcaster extends EventEmitter {
     this.on('resourceUpdated', listener);
   }
 
-  onResourceTypeUpdate(resourceType: string, listener: (event: ResourceUpdateEvent) => void): void {
+  onResourceTypeUpdate(
+    resourceType: string,
+    listener: (event: ResourceUpdateEvent) => void
+  ): void {
     this.on(`resourceUpdated:${resourceType}`, listener);
   }
 
@@ -80,17 +99,32 @@ export class EventBroadcaster extends EventEmitter {
     vscode.commands.executeCommand('setContext', contextKey, value);
   }
 
-  onContextChange(listener: (event: { contextKey: string; value: any; timestamp: Date }) => void): void {
+  onContextChange(
+    listener: (event: {
+      contextKey: string;
+      value: any;
+      timestamp: Date;
+    }) => void
+  ): void {
     this.on('contextChanged', listener);
   }
 
   // MCP server events
-  broadcastMCPServerEvent(event: 'started' | 'stopped' | 'error' | 'connected' | 'disconnected', data?: any): void {
+  broadcastMCPServerEvent(
+    event: 'started' | 'stopped' | 'error' | 'connected' | 'disconnected',
+    data?: any
+  ): void {
     this.emit('mcpServerEvent', { event, data, timestamp: new Date() });
-    vscode.commands.executeCommand('setContext', 'documentationGenerator.mcpServerStatus', event);
+    vscode.commands.executeCommand(
+      'setContext',
+      'documentationGenerator.mcpServerStatus',
+      event
+    );
   }
 
-  onMCPServerEvent(listener: (event: { event: string; data?: any; timestamp: Date }) => void): void {
+  onMCPServerEvent(
+    listener: (event: { event: string; data?: any; timestamp: Date }) => void
+  ): void {
     this.on('mcpServerEvent', listener);
   }
 

@@ -1,5 +1,10 @@
 import * as vscode from 'vscode';
-import { TemplateManager, Template, TemplateMetadata } from '../templates/TemplateManager';
+import * as path from 'path';
+import {
+  TemplateManager,
+  Template,
+  TemplateMetadata,
+} from '../templates/TemplateManager';
 
 export class TemplateManagementPanel {
   public static readonly viewType = 'templateManagement';
@@ -7,7 +12,10 @@ export class TemplateManagementPanel {
   private readonly panel: vscode.WebviewPanel;
   private disposables: vscode.Disposable[] = [];
 
-  public static createOrShow(extensionUri: vscode.Uri, templateManager: TemplateManager) {
+  public static createOrShow(
+    extensionUri: vscode.Uri,
+    templateManager: TemplateManager
+  ) {
     const column = vscode.window.activeTextEditor
       ? vscode.window.activeTextEditor.viewColumn
       : undefined;
@@ -24,7 +32,7 @@ export class TemplateManagementPanel {
       {
         enableScripts: true,
         localResourceRoots: [vscode.Uri.joinPath(extensionUri, 'media')],
-        retainContextWhenHidden: true
+        retainContextWhenHidden: true,
       }
     );
 
@@ -52,16 +60,108 @@ export class TemplateManagementPanel {
     );
 
     // Initialize templates on startup
-    console.log('TemplateManagementPanel: Initializing with template manager:', !!this.templateManager);
+    console.log(
+      'TemplateManagementPanel: Initializing with template manager:',
+      !!this.templateManager
+    );
     this.initializeTemplates();
   }
 
   private async initializeTemplates() {
     // Give the webview a moment to load before sending initial templates
     setTimeout(async () => {
-      console.log('TemplateManagementPanel: Sending initial templates to webview');
+      console.log(
+        'TemplateManagementPanel: Sending initial templates to webview'
+      );
       await this.sendTemplates();
     }, 1000);
+  }
+
+  private async startTemplateCreationFlow(): Promise<void> {
+    try {
+      const name = await vscode.window.showInputBox({
+        title: 'New Template',
+        prompt: 'Enter a name for your template',
+        placeHolder: 'Release Notes',
+        validateInput: (value) => {
+          if (!value || value.trim().length === 0) {
+            return 'Template name is required';
+          }
+          return undefined;
+        },
+      });
+
+      if (!name) {
+        return;
+      }
+
+      const description = await vscode.window.showInputBox({
+        title: 'Template Description',
+        prompt: 'Briefly describe how this template will be used',
+        placeHolder: 'Documentation template for release notes',
+      });
+
+      const category = await vscode.window.showInputBox({
+        title: 'Template Category',
+        prompt: 'Optionally categorize this template',
+        placeHolder: 'custom',
+        value: 'custom',
+      });
+
+      const tagsInput = await vscode.window.showInputBox({
+        title: 'Template Tags',
+        prompt: 'Add comma-separated tags to help find this template later',
+        placeHolder: 'custom, release',
+        value: 'custom',
+      });
+
+      const templateId = this.templateManager.generateUniqueTemplateId(name);
+      const parsedTags = this.parseTagsInput(tagsInput);
+
+      const metadata: TemplateMetadata = {
+        name: name.trim(),
+        description:
+          description?.trim() ||
+          'Custom documentation template created from Template Management.',
+        author: this.getDefaultAuthor(),
+        version: '1.0.0',
+        category: category?.trim() || 'custom',
+        tags: parsedTags.length > 0 ? parsedTags : ['custom'],
+      };
+
+      const placeholderContent = `# {{title}}\n\n<!-- Write your template content here -->\n\n## Overview\n\nProvide the main context for this document.\n\n## Details\n\nAdd the sections, tables, or lists you need.\n`;
+
+      const template: Template = {
+        id: templateId,
+        metadata,
+        content: placeholderContent,
+        filePath: '',
+      };
+
+      await this.templateManager.saveTemplate(template);
+      await this.sendTemplates();
+
+      const savedTemplate = this.templateManager.getTemplate(templateId);
+      if (savedTemplate?.filePath) {
+        const document = await vscode.workspace.openTextDocument(
+          savedTemplate.filePath
+        );
+        await vscode.window.showTextDocument(document, {
+          preview: false,
+        });
+        vscode.window.showInformationMessage(
+          'Template created! Customize the opened file and save your changes.'
+        );
+      } else {
+        vscode.window.showInformationMessage(
+          'Template created successfully. You can edit it from the Templates list.'
+        );
+      }
+    } catch (error) {
+      vscode.window.showErrorMessage(
+        `Failed to create template: ${(error as Error).message}`
+      );
+    }
   }
 
   private async handleMessage(message: any) {
@@ -73,7 +173,11 @@ export class TemplateManagementPanel {
         console.log('[TemplateManagementPanel Webview]', message.message);
         break;
       case 'createTemplate':
-        await this.createTemplate(message.template);
+        if (message.template) {
+          await this.createTemplate(message.template);
+        } else {
+          await this.startTemplateCreationFlow();
+        }
         break;
       case 'editTemplate':
         await this.editTemplate(message.templateId);
@@ -107,20 +211,25 @@ export class TemplateManagementPanel {
 
       const templatesMap = await this.templateManager.getAllTemplates();
       const templatesArray = Array.from(templatesMap.values());
-      console.log(`TemplateManagementPanel: Loaded ${templatesArray.length} templates`);
+      console.log(
+        `TemplateManagementPanel: Loaded ${templatesArray.length} templates`
+      );
 
       if (templatesArray.length > 0) {
-        console.log('TemplateManagementPanel: Template details:', templatesArray.map(t => ({
-          id: t.id,
-          name: t.metadata.name,
-          category: t.metadata.category,
-          filePath: t.filePath
-        })));
+        console.log(
+          'TemplateManagementPanel: Template details:',
+          templatesArray.map((t) => ({
+            id: t.id,
+            name: t.metadata.name,
+            category: t.metadata.category,
+            filePath: t.filePath,
+          }))
+        );
       }
 
       this.panel.webview.postMessage({
         type: 'templatesLoaded',
-        templates: templatesArray
+        templates: templatesArray,
       });
 
       console.log('TemplateManagementPanel: Sent templates to webview');
@@ -131,18 +240,43 @@ export class TemplateManagementPanel {
       // Send empty array so UI can show "no templates" state
       this.panel.webview.postMessage({
         type: 'templatesLoaded',
-        templates: []
+        templates: [],
       });
     }
   }
 
   private async createTemplate(templateData: any) {
     try {
+      if (!templateData || !templateData.metadata || !templateData.content) {
+        await this.startTemplateCreationFlow();
+        return;
+      }
+
+      const templateId = templateData.id
+        ? String(templateData.id)
+        : this.templateManager.generateUniqueTemplateId(
+            templateData.metadata.name || 'template'
+          );
+
       const template: Template = {
-        id: templateData.id || Date.now().toString(),
-        metadata: templateData.metadata,
+        id: templateId,
+        metadata: {
+          ...templateData.metadata,
+          name:
+            templateData.metadata.name?.trim() ||
+            this.toTitleCase(templateId.replace(/-/g, ' ')),
+          description:
+            templateData.metadata.description?.trim() ||
+            'Custom documentation template',
+          category: templateData.metadata.category || 'custom',
+          version: templateData.metadata.version || '1.0.0',
+          tags:
+            templateData.metadata.tags?.length > 0
+              ? templateData.metadata.tags
+              : ['custom'],
+        },
         content: templateData.content,
-        filePath: ''
+        filePath: '',
       };
 
       await this.templateManager.saveTemplate(template);
@@ -162,10 +296,14 @@ export class TemplateManagementPanel {
 
       // Open template file for editing
       if (template.filePath) {
-        const document = await vscode.workspace.openTextDocument(template.filePath);
+        const document = await vscode.workspace.openTextDocument(
+          template.filePath
+        );
         await vscode.window.showTextDocument(document);
       } else {
-        vscode.window.showWarningMessage('Template file path not found. Please export and re-import this template.');
+        vscode.window.showWarningMessage(
+          'Template file path not found. Please export and re-import this template.'
+        );
       }
     } catch (error) {
       vscode.window.showErrorMessage(`Failed to edit template: ${error}`);
@@ -194,10 +332,13 @@ export class TemplateManagementPanel {
 
   private async previewTemplate(templateId: string, variables: any) {
     try {
-      const result = await this.templateManager.processTemplate(templateId, variables);
+      const result = await this.templateManager.processTemplate(
+        templateId,
+        variables
+      );
       this.panel.webview.postMessage({
         type: 'templatePreview',
-        content: result
+        content: result,
       });
     } catch (error) {
       vscode.window.showErrorMessage(`Failed to preview template: ${error}`);
@@ -214,8 +355,8 @@ export class TemplateManagementPanel {
       const uri = await vscode.window.showSaveDialog({
         defaultUri: vscode.Uri.file(`${template.metadata.name}.json`),
         filters: {
-          'Template Files': ['json']
-        }
+          'Template Files': ['json'],
+        },
       });
 
       if (uri) {
@@ -237,45 +378,174 @@ export class TemplateManagementPanel {
         canSelectMany: false,
         filters: {
           'Template Files': ['json', 'md'],
-          'All Files': ['*']
-        }
+          'All Files': ['*'],
+        },
       });
 
       if (uri && uri[0]) {
-        const content = await vscode.workspace.fs.readFile(uri[0]);
-        const fileContent = content.toString();
+        const selectedUri = uri[0];
+        const contentBuffer = await vscode.workspace.fs.readFile(selectedUri);
+        const fileContent = Buffer.from(contentBuffer).toString('utf8');
 
-        let template: Template;
-        if (uri[0].fsPath.endsWith('.json')) {
-          template = JSON.parse(fileContent);
+        if (selectedUri.fsPath.endsWith('.json')) {
+          const templateData = JSON.parse(fileContent);
+          const fallbackName = path
+            .basename(selectedUri.fsPath, path.extname(selectedUri.fsPath))
+            .replace(/[-_]/g, ' ');
+
+          const template = await this.normalizeImportedTemplate(
+            templateData,
+            fallbackName
+          );
+
+          await this.templateManager.saveTemplate(template);
+          await this.sendTemplates();
+          vscode.window.showInformationMessage(
+            `Template "${template.metadata.name}" imported successfully!`
+          );
         } else {
-          // Handle markdown file import
-          const fileName = uri[0].fsPath.split('/').pop()?.replace(/\.(md|txt)$/, '') || 'imported-template';
-          template = {
-            id: Date.now().toString(),
-            metadata: {
-              name: fileName.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-              description: `Imported template from ${fileName}`,
-              author: 'Imported',
-              version: '1.0.0',
-              category: 'imported',
-              tags: ['imported']
-            },
-            content: fileContent,
-            filePath: ''
-          };
+          const imported = await this.importMarkdownTemplate(
+            selectedUri,
+            fileContent
+          );
+          await this.sendTemplates();
+          vscode.window.showInformationMessage(
+            `Template "${imported.metadata.name}" imported successfully!`
+          );
         }
-
-        // Ensure unique ID
-        template.id = Date.now().toString();
-
-        await this.templateManager.saveTemplate(template);
-        await this.sendTemplates();
-        vscode.window.showInformationMessage('Template imported successfully!');
       }
     } catch (error) {
       vscode.window.showErrorMessage(`Failed to import template: ${error}`);
     }
+  }
+
+  private parseTagsInput(input?: string | null): string[] {
+    if (!input) {
+      return [];
+    }
+
+    return input
+      .split(',')
+      .map((tag) => tag.trim())
+      .filter((tag) => tag.length > 0);
+  }
+
+  private getDefaultAuthor(): string {
+    const config = vscode.workspace.getConfiguration('documentation-generator');
+    return (
+      config.get<string>('defaultAuthor') ||
+      config.get<string>('authorName') ||
+      process.env.USER ||
+      'User'
+    );
+  }
+
+  private toTitleCase(value: string): string {
+    return value
+      .split(/\s+|-/)
+      .filter((part) => part.length > 0)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
+  }
+
+  private extractFirstHeading(markdown: string): string | undefined {
+    const match = markdown.match(/^#\s+(.+)$/m);
+    return match ? match[1].trim() : undefined;
+  }
+
+  private async normalizeImportedTemplate(
+    templateData: any,
+    fallbackName: string
+  ): Promise<Template> {
+    if (!templateData) {
+      throw new Error('Template data is empty');
+    }
+
+    const metadata: Partial<TemplateMetadata> = templateData.metadata || {};
+
+    const name = metadata.name?.trim() || this.toTitleCase(fallbackName);
+    const description =
+      metadata.description?.trim() || `Imported template for ${name}`;
+    const category = metadata.category?.trim() || 'imported';
+    let tags = Array.isArray(metadata.tags)
+      ? metadata.tags.filter((tag) => Boolean(tag))
+      : this.parseTagsInput(metadata.tags as unknown as string);
+
+    if (tags.length === 0) {
+      tags = ['imported'];
+    }
+
+    if (!templateData.content || !String(templateData.content).trim()) {
+      throw new Error('Template content is missing');
+    }
+
+    const templateId = this.templateManager.generateUniqueTemplateId(
+      templateData.id || name
+    );
+
+    return {
+      id: templateId,
+      metadata: {
+        ...metadata,
+        name,
+        description,
+        category,
+        tags,
+        author: metadata.author || 'Imported',
+        version: metadata.version || '1.0.0',
+      },
+      content: String(templateData.content),
+      filePath: '',
+    };
+  }
+
+  private async importMarkdownTemplate(
+    selectedUri: vscode.Uri,
+    fileContent: string
+  ): Promise<Template> {
+    try {
+      const installedTemplate = await this.templateManager.installTemplate(
+        selectedUri.fsPath
+      );
+      return installedTemplate;
+    } catch (error) {
+      console.warn(
+        'TemplateManagementPanel: Failed to install markdown template via TemplateManager. Falling back to manual import.',
+        error
+      );
+      return this.createTemplateFromMarkdownContent(
+        path.basename(selectedUri.fsPath, path.extname(selectedUri.fsPath)),
+        fileContent
+      );
+    }
+  }
+
+  private async createTemplateFromMarkdownContent(
+    baseName: string,
+    fileContent: string
+  ): Promise<Template> {
+    const firstHeading = this.extractFirstHeading(fileContent);
+    const name = firstHeading || this.toTitleCase(baseName);
+    const templateId = this.templateManager.generateUniqueTemplateId(baseName);
+
+    const template: Template = {
+      id: templateId,
+      metadata: {
+        name,
+        description: `Imported template from ${name}`,
+        author: 'Imported',
+        version: '1.0.0',
+        category: 'imported',
+        tags: ['imported'],
+      },
+      content: fileContent,
+      filePath: '',
+    };
+
+    await this.templateManager.saveTemplate(template);
+    return (
+      this.templateManager.getTemplate(template.id) || template
+    );
   }
 
   private async update() {
@@ -395,8 +665,8 @@ export class TemplateManagementPanel {
     <div class="header">
         <h1>Template Management</h1>
         <div class="actions">
-            <button class="btn" onclick="importTemplate()">📁 Import Template</button>
-            <button class="btn" onclick="createNewTemplate()">➕ Create New Template</button>
+            <button class="btn" id="import-btn">📁 Import Template</button>
+            <button class="btn" id="create-btn">➕ Create New Template</button>
         </div>
     </div>
 
@@ -416,41 +686,28 @@ export class TemplateManagementPanel {
 
         let templates = [];
 
-        // Global functions for button handlers
-        window.importTemplate = function() {
+        // Functions for button handlers
+        function importTemplate() {
             console.log('Import template clicked');
             vscode.postMessage({ type: 'importTemplate' });
-        };
+        }
 
-        window.createNewTemplate = function() {
+        function createNewTemplate() {
             console.log('Create new template clicked');
-            // Send basic template structure for creation
-            const newTemplate = {
-                metadata: {
-                    name: 'New Template',
-                    description: 'A new custom template',
-                    author: 'User',
-                    version: '1.0.0',
-                    category: 'custom',
-                    tags: ['custom']
-                },
-                content: '# {{title}}\n\nYour template content goes here...'
-            };
             vscode.postMessage({
-                type: 'createTemplate',
-                template: newTemplate
+                type: 'createTemplate'
             });
-        };
+        }
 
-        window.editTemplate = function(templateId) {
+        function editTemplate(templateId) {
             console.log('Edit template:', templateId);
             vscode.postMessage({
                 type: 'editTemplate',
                 templateId: templateId
             });
-        };
+        }
 
-        window.deleteTemplate = function(templateId, templateName) {
+        function deleteTemplate(templateId, templateName) {
             if (confirm('Are you sure you want to delete template: ' + templateName + '?')) {
                 console.log('Delete template:', templateId);
                 vscode.postMessage({
@@ -458,24 +715,24 @@ export class TemplateManagementPanel {
                     templateId: templateId
                 });
             }
-        };
+        }
 
-        window.exportTemplate = function(templateId) {
+        function exportTemplate(templateId) {
             console.log('Export template:', templateId);
             vscode.postMessage({
                 type: 'exportTemplate',
                 templateId: templateId
             });
-        };
+        }
 
-        window.previewTemplate = function(templateId) {
+        function previewTemplate(templateId) {
             console.log('Preview template:', templateId);
             vscode.postMessage({
                 type: 'previewTemplate',
                 templateId: templateId,
                 variables: {}
             });
-        };
+        }
 
         // Message handler
         window.addEventListener('message', event => {
@@ -527,14 +784,57 @@ export class TemplateManagementPanel {
                         \${tags.map(tag => \`<span class="tag">\${tag}</span>\`).join('')}
                     </div>
                     <div class="template-actions">
-                        <button class="btn btn-small" onclick="previewTemplate('\${template.id}')">👁 Preview</button>
-                        <button class="btn btn-small btn-secondary" onclick="editTemplate('\${template.id}')">✏️ Edit</button>
-                        <button class="btn btn-small btn-secondary" onclick="exportTemplate('\${template.id}')">📤 Export</button>
-                        <button class="btn btn-small btn-secondary" onclick="deleteTemplate('\${template.id}', '\${name}')">🗑 Delete</button>
+                        <button class="btn btn-small template-action" data-action="preview" data-id="\${template.id}">👁 Preview</button>
+                        <button class="btn btn-small btn-secondary template-action" data-action="edit" data-id="\${template.id}">✏️ Edit</button>
+                        <button class="btn btn-small btn-secondary template-action" data-action="export" data-id="\${template.id}">📤 Export</button>
+                        <button class="btn btn-small btn-secondary template-action" data-action="delete" data-id="\${template.id}" data-name="\${name}">🗑 Delete</button>
                     </div>
                 </div>
                 \`;
             }).join('');
+
+            // Add event delegation for template action buttons
+            gridEl.addEventListener('click', function(event) {
+                const button = event.target.closest('.template-action');
+                if (button) {
+                    const action = button.dataset.action;
+                    const templateId = button.dataset.id;
+                    const templateName = button.dataset.name;
+
+                    switch (action) {
+                        case 'preview':
+                            previewTemplate(templateId);
+                            break;
+                        case 'edit':
+                            editTemplate(templateId);
+                            break;
+                        case 'export':
+                            exportTemplate(templateId);
+                            break;
+                        case 'delete':
+                            deleteTemplate(templateId, templateName);
+                            break;
+                    }
+                }
+            });
+        }
+
+        // Add event listeners immediately (DOM should be ready since script is at bottom)
+        const importBtn = document.getElementById('import-btn');
+        const createBtn = document.getElementById('create-btn');
+
+        if (importBtn) {
+            importBtn.addEventListener('click', importTemplate);
+            console.log('Import button event listener added');
+        } else {
+            console.error('Import button not found in DOM');
+        }
+
+        if (createBtn) {
+            createBtn.addEventListener('click', createNewTemplate);
+            console.log('Create button event listener added');
+        } else {
+            console.error('Create button not found in DOM');
         }
 
         // Request templates on load

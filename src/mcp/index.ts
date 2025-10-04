@@ -4,12 +4,9 @@ export {
   MCPResourceProvider,
   FolderContextProvider,
   TemplateProvider,
-  RecentGenerationsProvider
+  RecentGenerationsProvider,
 } from './MCPServer';
 
 export * from './ResourceProviders';
 
-export {
-  MCPClient,
-  MCPResource as ClientMCPResource
-} from './MCPClient';
+export { MCPClient, MCPResource as ClientMCPResource } from './MCPClient';

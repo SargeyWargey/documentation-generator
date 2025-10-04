@@ -1,5 +1,9 @@
 import { ClaudeIntegrator, ClaudeIntegratorConfig } from '../ClaudeIntegrator';
-import { ClaudeCommandContext, ClaudeCommandResult, SlashCommand } from '../types';
+import {
+  ClaudeCommandContext,
+  ClaudeCommandResult,
+  SlashCommand,
+} from '../types';
 import { SlashCommandGenerator } from '../SlashCommandGenerator';
 import { FolderContext } from '../../utils/FolderAnalyzer';
 import { Template } from '../../templates/TemplateManager';
@@ -8,12 +12,16 @@ import { Template } from '../../templates/TemplateManager';
 class MockClaudeIntegrator extends ClaudeIntegrator {
   public mockResults: Map<string, ClaudeCommandResult> = new Map();
 
-  async generateDocumentation(context: ClaudeCommandContext): Promise<ClaudeCommandResult> {
+  async generateDocumentation(
+    context: ClaudeCommandContext
+  ): Promise<ClaudeCommandResult> {
     const command = await this.createSlashCommand(context);
     return this.executeCommand(command);
   }
 
-  async createSlashCommand(context: ClaudeCommandContext): Promise<SlashCommand> {
+  async createSlashCommand(
+    context: ClaudeCommandContext
+  ): Promise<SlashCommand> {
     const generated = await this.commandGenerator.generateSlashCommand(context);
 
     const command: SlashCommand = {
@@ -263,10 +271,15 @@ describe('ClaudeIntegrator', () => {
   describe('error handling', () => {
     it('should handle command generator errors', async () => {
       const mockGenerator = {
-        generateSlashCommand: jest.fn().mockRejectedValue(new Error('Generator failed')),
+        generateSlashCommand: jest
+          .fn()
+          .mockRejectedValue(new Error('Generator failed')),
       } as any;
 
-      const integratorWithFailingGenerator = new MockClaudeIntegrator(config, mockGenerator);
+      const integratorWithFailingGenerator = new MockClaudeIntegrator(
+        config,
+        mockGenerator
+      );
 
       const context = {
         folderPath: '/test/project',
@@ -275,8 +288,9 @@ describe('ClaudeIntegrator', () => {
         variables: { title: 'Test' },
       };
 
-      await expect(integratorWithFailingGenerator.createSlashCommand(context))
-        .rejects.toThrow('Generator failed');
+      await expect(
+        integratorWithFailingGenerator.createSlashCommand(context)
+      ).rejects.toThrow('Generator failed');
     });
 
     it('should provide error details in results', async () => {
@@ -318,7 +332,9 @@ describe('ClaudeIntegrator', () => {
 
     it('should use default command generator if not provided', () => {
       const integratorWithDefaults = new MockClaudeIntegrator(config);
-      expect((integratorWithDefaults as any).commandGenerator).toBeInstanceOf(SlashCommandGenerator);
+      expect((integratorWithDefaults as any).commandGenerator).toBeInstanceOf(
+        SlashCommandGenerator
+      );
     });
   });
 });

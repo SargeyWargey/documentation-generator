@@ -17,7 +17,17 @@ export interface ValidationResult {
 
 export interface ValidationSchema {
   required?: boolean;
-  type?: 'string' | 'number' | 'boolean' | 'array' | 'object' | 'date' | 'email' | 'url' | 'path' | 'select';
+  type?:
+    | 'string'
+    | 'number'
+    | 'boolean'
+    | 'array'
+    | 'object'
+    | 'date'
+    | 'email'
+    | 'url'
+    | 'path'
+    | 'select';
   minLength?: number;
   maxLength?: number;
   min?: number;
@@ -50,11 +60,14 @@ export class ValidationService {
       isValid: true,
       errors: [],
       warnings: [],
-      sanitizedValue: data
+      sanitizedValue: data,
     };
 
     // Check if required
-    if (schema.required && (data === null || data === undefined || data === '')) {
+    if (
+      schema.required &&
+      (data === null || data === undefined || data === '')
+    ) {
       result.isValid = false;
       result.errors.push('This field is required');
       return result;
@@ -78,7 +91,11 @@ export class ValidationService {
 
     // Length validation for strings and arrays
     if (schema.minLength !== undefined || schema.maxLength !== undefined) {
-      const lengthResult = this.validateLength(result.sanitizedValue, schema.minLength, schema.maxLength);
+      const lengthResult = this.validateLength(
+        result.sanitizedValue,
+        schema.minLength,
+        schema.maxLength
+      );
       if (!lengthResult.isValid) {
         result.isValid = false;
         result.errors.push(...lengthResult.errors);
@@ -87,7 +104,11 @@ export class ValidationService {
 
     // Numeric range validation
     if (schema.min !== undefined || schema.max !== undefined) {
-      const rangeResult = this.validateRange(result.sanitizedValue, schema.min, schema.max);
+      const rangeResult = this.validateRange(
+        result.sanitizedValue,
+        schema.min,
+        schema.max
+      );
       if (!rangeResult.isValid) {
         result.isValid = false;
         result.errors.push(...rangeResult.errors);
@@ -96,7 +117,10 @@ export class ValidationService {
 
     // Pattern validation
     if (schema.pattern) {
-      const patternResult = this.validatePattern(result.sanitizedValue, schema.pattern);
+      const patternResult = this.validatePattern(
+        result.sanitizedValue,
+        schema.pattern
+      );
       if (!patternResult.isValid) {
         result.isValid = false;
         result.errors.push(...patternResult.errors);
@@ -134,12 +158,15 @@ export class ValidationService {
   /**
    * Validate template variables
    */
-  validateTemplateVariables(variables: Record<string, any>, templateVariables: TemplateVariable[]): ValidationResult {
+  validateTemplateVariables(
+    variables: Record<string, any>,
+    templateVariables: TemplateVariable[]
+  ): ValidationResult {
     const result: ValidationResult = {
       isValid: true,
       errors: [],
       warnings: [],
-      sanitizedValue: { ...variables }
+      sanitizedValue: { ...variables },
     };
 
     for (const templateVar of templateVariables) {
@@ -150,10 +177,14 @@ export class ValidationService {
 
       if (!varResult.isValid) {
         result.isValid = false;
-        result.errors.push(`${templateVar.name}: ${varResult.errors.join(', ')}`);
+        result.errors.push(
+          `${templateVar.name}: ${varResult.errors.join(', ')}`
+        );
       }
 
-      result.warnings.push(...varResult.warnings.map(w => `${templateVar.name}: ${w}`));
+      result.warnings.push(
+        ...varResult.warnings.map((w) => `${templateVar.name}: ${w}`)
+      );
 
       if (varResult.sanitizedValue !== undefined) {
         result.sanitizedValue[templateVar.name] = varResult.sanitizedValue;
@@ -166,17 +197,20 @@ export class ValidationService {
   /**
    * Validate file paths
    */
-  validateFilePath(filePath: string, options?: {
-    mustExist?: boolean;
-    mustBeDirectory?: boolean;
-    allowRelative?: boolean;
-    allowedExtensions?: string[];
-  }): ValidationResult {
+  validateFilePath(
+    filePath: string,
+    options?: {
+      mustExist?: boolean;
+      mustBeDirectory?: boolean;
+      allowRelative?: boolean;
+      allowedExtensions?: string[];
+    }
+  ): ValidationResult {
     const result: ValidationResult = {
       isValid: true,
       errors: [],
       warnings: [],
-      sanitizedValue: this.sanitizeFilePath(filePath)
+      sanitizedValue: this.sanitizeFilePath(filePath),
     };
 
     // Check if path is provided
@@ -204,7 +238,9 @@ export class ValidationService {
       const ext = path.extname(result.sanitizedValue).toLowerCase();
       if (!options.allowedExtensions.includes(ext)) {
         result.isValid = false;
-        result.errors.push(`File extension must be one of: ${options.allowedExtensions.join(', ')}`);
+        result.errors.push(
+          `File extension must be one of: ${options.allowedExtensions.join(', ')}`
+        );
       }
     }
 
@@ -219,7 +255,7 @@ export class ValidationService {
       isValid: true,
       errors: [],
       warnings: [],
-      sanitizedValue: this.sanitizeFolderPath(folderPath)
+      sanitizedValue: this.sanitizeFolderPath(folderPath),
     };
 
     if (!folderPath || typeof folderPath !== 'string') {
@@ -236,7 +272,9 @@ export class ValidationService {
 
     // Check for absolute path requirement
     if (!path.isAbsolute(result.sanitizedValue)) {
-      result.warnings.push('Relative paths may not work correctly across different environments');
+      result.warnings.push(
+        'Relative paths may not work correctly across different environments'
+      );
     }
 
     return result;
@@ -250,7 +288,7 @@ export class ValidationService {
       isValid: true,
       errors: [],
       warnings: [],
-      sanitizedValue: this.sanitizeConfiguration(config)
+      sanitizedValue: this.sanitizeConfiguration(config),
     };
 
     if (!config || typeof config !== 'object') {
@@ -263,34 +301,44 @@ export class ValidationService {
     const configValidations = [
       {
         field: 'excludePatterns',
-        schema: { type: 'array' as const, custom: [this.getRegexArrayRule()] }
+        schema: { type: 'array' as const, custom: [this.getRegexArrayRule()] },
       },
       {
         field: 'includePatterns',
-        schema: { type: 'array' as const, custom: [this.getRegexArrayRule()] }
+        schema: { type: 'array' as const, custom: [this.getRegexArrayRule()] },
       },
       {
         field: 'maxDepth',
-        schema: { type: 'number' as const, min: 1, max: 50 }
+        schema: { type: 'number' as const, min: 1, max: 50 },
       },
       {
         field: 'maxFiles',
-        schema: { type: 'number' as const, min: 1, max: 100000 }
+        schema: { type: 'number' as const, min: 1, max: 100000 },
       },
       {
         field: 'outputDirectory',
-        schema: { type: 'string' as const, custom: [this.getPathValidationRule()] }
-      }
+        schema: {
+          type: 'string' as const,
+          custom: [this.getPathValidationRule()],
+        },
+      },
     ];
 
     for (const validation of configValidations) {
       if (validation.field in config) {
-        const fieldResult = this.validateAndSanitize(config[validation.field], validation.schema);
+        const fieldResult = this.validateAndSanitize(
+          config[validation.field],
+          validation.schema
+        );
         if (!fieldResult.isValid) {
           result.isValid = false;
-          result.errors.push(`${validation.field}: ${fieldResult.errors.join(', ')}`);
+          result.errors.push(
+            `${validation.field}: ${fieldResult.errors.join(', ')}`
+          );
         }
-        result.warnings.push(...fieldResult.warnings.map(w => `${validation.field}: ${w}`));
+        result.warnings.push(
+          ...fieldResult.warnings.map((w) => `${validation.field}: ${w}`)
+        );
 
         if (fieldResult.sanitizedValue !== undefined) {
           result.sanitizedValue[validation.field] = fieldResult.sanitizedValue;
@@ -304,12 +352,15 @@ export class ValidationService {
   /**
    * Sanitize user input strings
    */
-  sanitizeString(input: string, options?: {
-    removeHtml?: boolean;
-    removeScripts?: boolean;
-    maxLength?: number;
-    allowedChars?: RegExp;
-  }): string {
+  sanitizeString(
+    input: string,
+    options?: {
+      removeHtml?: boolean;
+      removeScripts?: boolean;
+      maxLength?: number;
+      allowedChars?: RegExp;
+    }
+  ): string {
     if (typeof input !== 'string') {
       return '';
     }
@@ -323,7 +374,10 @@ export class ValidationService {
 
     // Remove script tags specifically
     if (options?.removeScripts) {
-      sanitized = sanitized.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+      sanitized = sanitized.replace(
+        /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+        ''
+      );
     }
 
     // Remove non-allowed characters
@@ -361,7 +415,7 @@ export class ValidationService {
       isValid: true,
       errors: [],
       warnings: [],
-      sanitizedValue: value
+      sanitizedValue: value,
     };
 
     if (!type) {
@@ -423,7 +477,11 @@ export class ValidationService {
         break;
 
       case 'object':
-        if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+        if (
+          typeof value !== 'object' ||
+          value === null ||
+          Array.isArray(value)
+        ) {
           result.isValid = false;
           result.errors.push('Value must be an object');
         }
@@ -484,11 +542,15 @@ export class ValidationService {
     return result;
   }
 
-  private validateLength(value: any, minLength?: number, maxLength?: number): ValidationResult {
+  private validateLength(
+    value: any,
+    minLength?: number,
+    maxLength?: number
+  ): ValidationResult {
     const result: ValidationResult = {
       isValid: true,
       errors: [],
-      warnings: []
+      warnings: [],
     };
 
     let length = 0;
@@ -511,11 +573,15 @@ export class ValidationService {
     return result;
   }
 
-  private validateRange(value: any, min?: number, max?: number): ValidationResult {
+  private validateRange(
+    value: any,
+    min?: number,
+    max?: number
+  ): ValidationResult {
     const result: ValidationResult = {
       isValid: true,
       errors: [],
-      warnings: []
+      warnings: [],
     };
 
     if (typeof value !== 'number') {
@@ -539,7 +605,7 @@ export class ValidationService {
     const result: ValidationResult = {
       isValid: true,
       errors: [],
-      warnings: []
+      warnings: [],
     };
 
     if (typeof value !== 'string') {
@@ -550,7 +616,9 @@ export class ValidationService {
 
     if (!pattern.test(value)) {
       result.isValid = false;
-      result.errors.push(`Value does not match required pattern: ${pattern.source}`);
+      result.errors.push(
+        `Value does not match required pattern: ${pattern.source}`
+      );
     }
 
     return result;
@@ -560,7 +628,7 @@ export class ValidationService {
     const result: ValidationResult = {
       isValid: true,
       errors: [],
-      warnings: []
+      warnings: [],
     };
 
     if (!enumValues.includes(value)) {
@@ -571,10 +639,12 @@ export class ValidationService {
     return result;
   }
 
-  private templateVariableToSchema(templateVar: TemplateVariable): ValidationSchema {
+  private templateVariableToSchema(
+    templateVar: TemplateVariable
+  ): ValidationSchema {
     const schema: ValidationSchema = {
       required: templateVar.required,
-      type: templateVar.type
+      type: templateVar.type,
     };
 
     if (templateVar.type === 'select' && templateVar.options) {
@@ -627,11 +697,17 @@ export class ValidationService {
     // Deep clone and sanitize nested objects
     for (const [key, value] of Object.entries(config)) {
       if (typeof value === 'string') {
-        sanitized[key] = this.sanitizeString(value, { removeHtml: true, removeScripts: true });
+        sanitized[key] = this.sanitizeString(value, {
+          removeHtml: true,
+          removeScripts: true,
+        });
       } else if (Array.isArray(value)) {
-        sanitized[key] = value.map(item =>
+        sanitized[key] = value.map((item) =>
           typeof item === 'string'
-            ? this.sanitizeString(item, { removeHtml: true, removeScripts: true })
+            ? this.sanitizeString(item, {
+                removeHtml: true,
+                removeScripts: true,
+              })
             : item
         );
       } else if (typeof value === 'object' && value !== null) {
@@ -652,7 +728,7 @@ export class ValidationService {
         const result: ValidationResult = {
           isValid: true,
           errors: [],
-          warnings: []
+          warnings: [],
         };
 
         if (typeof value === 'string' && value.includes('..')) {
@@ -661,7 +737,7 @@ export class ValidationService {
         }
 
         return result;
-      }
+      },
     });
 
     this.addCustomRule('safeFileName', {
@@ -670,7 +746,7 @@ export class ValidationService {
         const result: ValidationResult = {
           isValid: true,
           errors: [],
-          warnings: []
+          warnings: [],
         };
 
         if (typeof value === 'string') {
@@ -688,7 +764,7 @@ export class ValidationService {
           return value.replace(/[<>:"|*?\\\/]/g, '_');
         }
         return value;
-      }
+      },
     });
   }
 
@@ -699,7 +775,7 @@ export class ValidationService {
         const result: ValidationResult = {
           isValid: true,
           errors: [],
-          warnings: []
+          warnings: [],
         };
 
         if (Array.isArray(value)) {
@@ -716,7 +792,7 @@ export class ValidationService {
         }
 
         return result;
-      }
+      },
     };
   }
 
@@ -727,7 +803,7 @@ export class ValidationService {
         const result: ValidationResult = {
           isValid: true,
           errors: [],
-          warnings: []
+          warnings: [],
         };
 
         if (typeof value === 'string') {
@@ -750,7 +826,7 @@ export class ValidationService {
           return this.sanitizeFilePath(value);
         }
         return value;
-      }
+      },
     };
   }
 }

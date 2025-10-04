@@ -1,5 +1,9 @@
 import * as vscode from 'vscode';
-import { TemplateManager, Template, TemplateVariable } from '../templates/TemplateManager';
+import {
+  TemplateManager,
+  Template,
+  TemplateVariable,
+} from '../templates/TemplateManager';
 import { FolderAnalyzer } from '../utils/FolderAnalyzer';
 
 export interface PreviewOptions {
@@ -21,7 +25,10 @@ export class TemplatePreviewPanel {
   private panel: vscode.WebviewPanel | undefined;
   private currentTemplate: Template | undefined;
 
-  constructor(templateManager: TemplateManager, folderAnalyzer: FolderAnalyzer) {
+  constructor(
+    templateManager: TemplateManager,
+    folderAnalyzer: FolderAnalyzer
+  ) {
     this.templateManager = templateManager;
     this.folderAnalyzer = folderAnalyzer;
   }
@@ -41,7 +48,7 @@ export class TemplatePreviewPanel {
       {
         enableScripts: true,
         retainContextWhenHidden: true,
-        localResourceRoots: []
+        localResourceRoots: [],
       }
     );
 
@@ -49,7 +56,11 @@ export class TemplatePreviewPanel {
     this.setupMessageHandling();
 
     // Generate and set HTML content
-    this.panel.webview.html = await this.generatePreviewHTML(template, testVariables, sampleFolder);
+    this.panel.webview.html = await this.generatePreviewHTML(
+      template,
+      testVariables,
+      sampleFolder
+    );
 
     // Handle panel disposal
     this.panel.onDidDispose(() => {
@@ -91,7 +102,10 @@ export class TemplatePreviewPanel {
   /**
    * Handle preview update request
    */
-  private async handleUpdatePreview(data: { variables: Record<string, any>; folderPath?: string }): Promise<void> {
+  private async handleUpdatePreview(data: {
+    variables: Record<string, any>;
+    folderPath?: string;
+  }): Promise<void> {
     if (!this.currentTemplate) return;
 
     try {
@@ -99,14 +113,16 @@ export class TemplatePreviewPanel {
       let contextVariables = { ...data.variables };
 
       if (data.folderPath) {
-        const folderContext = await this.folderAnalyzer.analyzeFolder(data.folderPath);
+        const folderContext = await this.folderAnalyzer.analyzeFolder(
+          data.folderPath
+        );
         contextVariables = {
           ...contextVariables,
           projectName: folderContext.name,
           folderStructure: this.formatFolderStructure(folderContext.files),
           fileCount: folderContext.files.length,
           dependencies: folderContext.dependencies.join(', '),
-          ...this.extractContextVariables(folderContext)
+          ...this.extractContextVariables(folderContext),
         };
       }
 
@@ -120,14 +136,13 @@ export class TemplatePreviewPanel {
         command: 'previewUpdated',
         data: {
           content: processedContent,
-          variables: contextVariables
-        }
+          variables: contextVariables,
+        },
       });
-
     } catch (error) {
       this.panel?.webview.postMessage({
         command: 'previewError',
-        data: { error: String(error) }
+        data: { error: String(error) },
       });
     }
   }
@@ -135,7 +150,10 @@ export class TemplatePreviewPanel {
   /**
    * Handle test scenario execution
    */
-  private async handleRunTest(data: { scenario: TestScenario; folderPath?: string }): Promise<void> {
+  private async handleRunTest(data: {
+    scenario: TestScenario;
+    folderPath?: string;
+  }): Promise<void> {
     if (!this.currentTemplate) return;
 
     try {
@@ -145,10 +163,11 @@ export class TemplatePreviewPanel {
       let testVariables = { ...scenario.variables };
 
       if (folderPath) {
-        const folderContext = await this.folderAnalyzer.analyzeFolder(folderPath);
+        const folderContext =
+          await this.folderAnalyzer.analyzeFolder(folderPath);
         testVariables = {
           ...testVariables,
-          ...this.extractContextVariables(folderContext)
+          ...this.extractContextVariables(folderContext),
         };
       }
 
@@ -167,10 +186,9 @@ export class TemplatePreviewPanel {
           scenario: scenario.name,
           result,
           analysis,
-          success: analysis.success
-        }
+          success: analysis.success,
+        },
       });
-
     } catch (error) {
       this.panel?.webview.postMessage({
         command: 'testResult',
@@ -180,10 +198,10 @@ export class TemplatePreviewPanel {
           analysis: {
             success: false,
             errors: [String(error)],
-            warnings: []
+            warnings: [],
           },
-          success: false
-        }
+          success: false,
+        },
       });
     }
   }
@@ -191,21 +209,25 @@ export class TemplatePreviewPanel {
   /**
    * Handle sample data generation
    */
-  private async handleGenerateSampleData(data: { folderPath?: string }): Promise<void> {
+  private async handleGenerateSampleData(data: {
+    folderPath?: string;
+  }): Promise<void> {
     if (!this.currentTemplate) return;
 
     try {
-      const sampleData = await this.generateSampleVariables(this.currentTemplate, data.folderPath);
+      const sampleData = await this.generateSampleVariables(
+        this.currentTemplate,
+        data.folderPath
+      );
 
       this.panel?.webview.postMessage({
         command: 'sampleDataGenerated',
-        data: sampleData
+        data: sampleData,
       });
-
     } catch (error) {
       this.panel?.webview.postMessage({
         command: 'sampleDataError',
-        data: { error: String(error) }
+        data: { error: String(error) },
       });
     }
   }
@@ -213,7 +235,9 @@ export class TemplatePreviewPanel {
   /**
    * Handle save test scenario request
    */
-  private async handleSaveTestScenario(data: { scenario: TestScenario }): Promise<void> {
+  private async handleSaveTestScenario(data: {
+    scenario: TestScenario;
+  }): Promise<void> {
     try {
       // Save test scenario to workspace settings or a dedicated file
       const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
@@ -230,14 +254,17 @@ export class TemplatePreviewPanel {
 
       let existingTests: TestScenario[] = [];
       try {
-        const existingContent = await vscode.workspace.fs.readFile(testFilePath);
+        const existingContent =
+          await vscode.workspace.fs.readFile(testFilePath);
         existingTests = JSON.parse(Buffer.from(existingContent).toString());
       } catch {
         // File doesn't exist yet
       }
 
       // Add or update scenario
-      const existingIndex = existingTests.findIndex(t => t.name === data.scenario.name);
+      const existingIndex = existingTests.findIndex(
+        (t) => t.name === data.scenario.name
+      );
       if (existingIndex >= 0) {
         existingTests[existingIndex] = data.scenario;
       } else {
@@ -249,8 +276,9 @@ export class TemplatePreviewPanel {
         Buffer.from(JSON.stringify(existingTests, null, 2))
       );
 
-      vscode.window.showInformationMessage(`Test scenario '${data.scenario.name}' saved`);
-
+      vscode.window.showInformationMessage(
+        `Test scenario '${data.scenario.name}' saved`
+      );
     } catch (error) {
       vscode.window.showErrorMessage(`Failed to save test scenario: ${error}`);
     }
@@ -259,7 +287,10 @@ export class TemplatePreviewPanel {
   /**
    * Handle export preview request
    */
-  private async handleExportPreview(data: { content: string; format: string }): Promise<void> {
+  private async handleExportPreview(data: {
+    content: string;
+    format: string;
+  }): Promise<void> {
     try {
       const fileName = `${this.currentTemplate?.metadata.name || 'template'}-preview`;
       const extension = data.format === 'html' ? 'html' : 'md';
@@ -269,8 +300,8 @@ export class TemplatePreviewPanel {
         filters: {
           'Markdown Files': ['md'],
           'HTML Files': ['html'],
-          'All Files': ['*']
-        }
+          'All Files': ['*'],
+        },
       });
 
       if (uri) {
@@ -295,7 +326,9 @@ ${this.markdownToHtml(data.content)}
         }
 
         await vscode.workspace.fs.writeFile(uri, Buffer.from(content));
-        vscode.window.showInformationMessage(`Preview exported to ${uri.fsPath}`);
+        vscode.window.showInformationMessage(
+          `Preview exported to ${uri.fsPath}`
+        );
       }
     } catch (error) {
       vscode.window.showErrorMessage(`Failed to export preview: ${error}`);
@@ -310,13 +343,13 @@ ${this.markdownToHtml(data.content)}
       canSelectFiles: false,
       canSelectFolders: true,
       canSelectMany: false,
-      openLabel: 'Select Folder for Context'
+      openLabel: 'Select Folder for Context',
     });
 
     if (folderUri && folderUri[0]) {
       this.panel?.webview.postMessage({
         command: 'folderSelected',
-        data: { path: folderUri[0].fsPath }
+        data: { path: folderUri[0].fsPath },
       });
     }
   }
@@ -324,26 +357,36 @@ ${this.markdownToHtml(data.content)}
   /**
    * Generate sample variables for testing
    */
-  private async generateSampleVariables(template: Template, folderPath?: string): Promise<Record<string, any>> {
+  private async generateSampleVariables(
+    template: Template,
+    folderPath?: string
+  ): Promise<Record<string, any>> {
     const variables: Record<string, any> = {};
 
     if (template.metadata.variables) {
       for (const variable of template.metadata.variables) {
         switch (variable.type) {
           case 'string':
-            variables[variable.name] = variable.default || this.generateSampleString(variable.name);
+            variables[variable.name] =
+              variable.default || this.generateSampleString(variable.name);
             break;
           case 'number':
-            variables[variable.name] = variable.default || Math.floor(Math.random() * 100) + 1;
+            variables[variable.name] =
+              variable.default || Math.floor(Math.random() * 100) + 1;
             break;
           case 'boolean':
-            variables[variable.name] = variable.default !== undefined ? variable.default : Math.random() > 0.5;
+            variables[variable.name] =
+              variable.default !== undefined
+                ? variable.default
+                : Math.random() > 0.5;
             break;
           case 'date':
-            variables[variable.name] = variable.default || new Date().toISOString().split('T')[0];
+            variables[variable.name] =
+              variable.default || new Date().toISOString().split('T')[0];
             break;
           case 'select':
-            variables[variable.name] = variable.default || variable.options?.[0] || 'Option 1';
+            variables[variable.name] =
+              variable.default || variable.options?.[0] || 'Option 1';
             break;
         }
       }
@@ -390,10 +433,17 @@ ${this.markdownToHtml(data.content)}
       fileCount: folderContext.files?.length || 0,
       folderCount: folderContext.folders?.length || 0,
       mainLanguage: this.detectMainLanguage(folderContext.files || []),
-      hasTests: folderContext.files?.some((f: any) => f.name.includes('test') || f.name.includes('spec')) || false,
-      hasReadme: folderContext.files?.some((f: any) => f.name.toLowerCase().includes('readme')) || false,
-      dependencies: folderContext.dependencies?.slice(0, 5).join(', ') || 'None',
-      totalLines: folderContext.totalLines || 0
+      hasTests:
+        folderContext.files?.some(
+          (f: any) => f.name.includes('test') || f.name.includes('spec')
+        ) || false,
+      hasReadme:
+        folderContext.files?.some((f: any) =>
+          f.name.toLowerCase().includes('readme')
+        ) || false,
+      dependencies:
+        folderContext.dependencies?.slice(0, 5).join(', ') || 'None',
+      totalLines: folderContext.totalLines || 0,
     };
   }
 
@@ -403,7 +453,7 @@ ${this.markdownToHtml(data.content)}
   private detectMainLanguage(files: any[]): string {
     const extensions: Record<string, number> = {};
 
-    files.forEach(file => {
+    files.forEach((file) => {
       const ext = file.name.split('.').pop()?.toLowerCase();
       if (ext) {
         extensions[ext] = (extensions[ext] || 0) + 1;
@@ -414,17 +464,17 @@ ${this.markdownToHtml(data.content)}
     const topExt = sortedExts[0]?.[0];
 
     const languageMap: Record<string, string> = {
-      'js': 'JavaScript',
-      'ts': 'TypeScript',
-      'py': 'Python',
-      'java': 'Java',
-      'cs': 'C#',
-      'cpp': 'C++',
-      'c': 'C',
-      'go': 'Go',
-      'rs': 'Rust',
-      'php': 'PHP',
-      'rb': 'Ruby'
+      js: 'JavaScript',
+      ts: 'TypeScript',
+      py: 'Python',
+      java: 'Java',
+      cs: 'C#',
+      cpp: 'C++',
+      c: 'C',
+      go: 'Go',
+      rs: 'Rust',
+      php: 'PHP',
+      rb: 'Ruby',
     };
 
     return languageMap[topExt] || 'Unknown';
@@ -447,11 +497,14 @@ ${this.markdownToHtml(data.content)}
   /**
    * Analyze test result
    */
-  private analyzeTestResult(result: string, scenario: TestScenario): { success: boolean; errors: string[]; warnings: string[] } {
+  private analyzeTestResult(
+    result: string,
+    scenario: TestScenario
+  ): { success: boolean; errors: string[]; warnings: string[] } {
     const analysis = {
       success: true,
       errors: [] as string[],
-      warnings: [] as string[]
+      warnings: [] as string[],
     };
 
     // Check if result is empty
@@ -465,7 +518,9 @@ ${this.markdownToHtml(data.content)}
     const unresolvedVariables = result.match(/{{[^}]+}}/g);
     if (unresolvedVariables) {
       analysis.success = false;
-      analysis.errors.push(`Unresolved variables found: ${unresolvedVariables.join(', ')}`);
+      analysis.errors.push(
+        `Unresolved variables found: ${unresolvedVariables.join(', ')}`
+      );
     }
 
     // Check expected outputs if provided
@@ -480,7 +535,9 @@ ${this.markdownToHtml(data.content)}
     // Check for basic markdown structure if it looks like markdown
     if (result.includes('#') || result.includes('##')) {
       if (!result.includes('# ')) {
-        analysis.warnings.push('Markdown document may be missing proper heading structure');
+        analysis.warnings.push(
+          'Markdown document may be missing proper heading structure'
+        );
       }
     }
 
@@ -504,8 +561,14 @@ ${this.markdownToHtml(data.content)}
   /**
    * Generate the webview HTML content
    */
-  private async generatePreviewHTML(template: Template, testVariables?: Record<string, any>, sampleFolder?: string): Promise<string> {
-    const variables = testVariables || await this.generateSampleVariables(template, sampleFolder);
+  private async generatePreviewHTML(
+    template: Template,
+    testVariables?: Record<string, any>,
+    sampleFolder?: string
+  ): Promise<string> {
+    const variables =
+      testVariables ||
+      (await this.generateSampleVariables(template, sampleFolder));
 
     return `<!DOCTYPE html>
 <html lang="en">

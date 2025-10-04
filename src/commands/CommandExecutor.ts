@@ -37,8 +37,11 @@ export class CommandExecutor {
     context: ClaudeCommandContext,
     options: CommandExecutionOptions = {}
   ): Promise<GeneratedSlashCommand> {
-    const { skipValidation, autoExecute: _autoExecute, ...generationOptions } =
-      options;
+    const {
+      skipValidation,
+      autoExecute: _autoExecute,
+      ...generationOptions
+    } = options;
 
     if (!skipValidation) {
       this.validateTemplateCompatibility(context);
@@ -143,7 +146,9 @@ export class CommandExecutor {
 
   private ensureRequiredVariables(context: ClaudeCommandContext): void {
     const requiredVariables =
-      context.template.metadata.variables?.filter((variable) => variable.required) || [];
+      context.template.metadata.variables?.filter(
+        (variable) => variable.required
+      ) || [];
 
     const missingVariables = requiredVariables.filter((variable) => {
       const value = context.variables[variable.name];

@@ -315,7 +315,9 @@ export class MCPServer {
       this.mcpClient.on('exit', (code, _signal) => {
         this.isRunning = false;
         if (code !== 0) {
-          vscode.window.showWarningMessage(`MCP Server exited with code ${code}`);
+          vscode.window.showWarningMessage(
+            `MCP Server exited with code ${code}`
+          );
         }
       });
 
@@ -327,7 +329,6 @@ export class MCPServer {
 
       await this.mcpClient.start();
       this.isRunning = true;
-
     } catch (error) {
       vscode.window.showErrorMessage(
         `Failed to start MCP Server: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -365,7 +366,7 @@ export class MCPServer {
       try {
         // Get resources from the MCP server
         const resources = await this.mcpClient.listResources();
-        return resources.map(resource => ({
+        return resources.map((resource) => ({
           uri: resource.uri,
           name: resource.name,
           description: resource.description || '',
@@ -484,7 +485,9 @@ export class MCPServer {
     }
 
     // Try to find the server in the extension directory
-    const extensionPath = vscode.extensions.getExtension('your-publisher.documentation-generator')?.extensionPath;
+    const extensionPath = vscode.extensions.getExtension(
+      'your-publisher.documentation-generator'
+    )?.extensionPath;
     if (extensionPath) {
       return path.join(extensionPath, 'mcp-server', 'dist', 'index.js');
     }
@@ -495,7 +498,10 @@ export class MCPServer {
   /**
    * Analyze folder using MCP server
    */
-  async analyzeFolder(_folderPath: string, _excludePatterns?: string[]): Promise<any> {
+  async analyzeFolder(
+    _folderPath: string,
+    _excludePatterns?: string[]
+  ): Promise<any> {
     if (!this.mcpClient || !this.isRunning) {
       throw new Error('MCP server not running');
     }
@@ -519,7 +525,10 @@ export class MCPServer {
       try {
         // In a real implementation, this would send the context to the MCP server
         // using a tool call like update_folder_context
-        console.log('Syncing folder context with MCP server:', context.folderPath);
+        console.log(
+          'Syncing folder context with MCP server:',
+          context.folderPath
+        );
       } catch (error) {
         console.warn('Failed to sync folder context with MCP server:', error);
       }

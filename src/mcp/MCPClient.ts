@@ -36,7 +36,10 @@ export interface MCPResource {
 export class MCPClient extends EventEmitter {
   private serverProcess: ChildProcess | null = null;
   private messageId = 0;
-  private pendingRequests = new Map<string | number, { resolve: Function; reject: Function; timeout: NodeJS.Timeout }>();
+  private pendingRequests = new Map<
+    string | number,
+    { resolve: Function; reject: Function; timeout: NodeJS.Timeout }
+  >();
   private isInitialized = false;
   private buffer = '';
   private reconnectAttempts = 0;
@@ -44,7 +47,10 @@ export class MCPClient extends EventEmitter {
   private reconnectDelay = 1000; // Start with 1 second
   private isReconnecting = false;
 
-  constructor(private serverPath: string, private serverArgs: string[] = []) {
+  constructor(
+    private serverPath: string,
+    private serverArgs: string[] = []
+  ) {
     super();
   }
 
@@ -55,10 +61,14 @@ export class MCPClient extends EventEmitter {
 
     return new Promise((resolve, reject) => {
       try {
-        this.serverProcess = spawn('node', [this.serverPath, ...this.serverArgs], {
-          stdio: ['pipe', 'pipe', 'pipe'],
-          env: { ...process.env },
-        });
+        this.serverProcess = spawn(
+          'node',
+          [this.serverPath, ...this.serverArgs],
+          {
+            stdio: ['pipe', 'pipe', 'pipe'],
+            env: { ...process.env },
+          }
+        );
 
         this.serverProcess.stdout?.on('data', (data) => {
           this.handleServerMessage(data.toString());
@@ -78,7 +88,11 @@ export class MCPClient extends EventEmitter {
           this.cleanup();
 
           // Attempt reconnection if exit was unexpected
-          if (code !== 0 && !this.isReconnecting && this.reconnectAttempts < this.maxReconnectAttempts) {
+          if (
+            code !== 0 &&
+            !this.isReconnecting &&
+            this.reconnectAttempts < this.maxReconnectAttempts
+          ) {
             this.attemptReconnection();
           }
         });
@@ -146,14 +160,21 @@ export class MCPClient extends EventEmitter {
     return await this.sendRequest('resources/read', { uri });
   }
 
-  private sendRequest(method: string, params?: any, retries: number = 2): Promise<any> {
+  private sendRequest(
+    method: string,
+    params?: any,
+    retries: number = 2
+  ): Promise<any> {
     return new Promise((resolve, reject) => {
       if (!this.serverProcess || !this.serverProcess.stdin) {
         if (retries > 0 && !this.isReconnecting) {
           // Try to reconnect and retry
-          this.attemptReconnection().then(() => {
-            return this.sendRequest(method, params, retries - 1);
-          }).then(resolve).catch(reject);
+          this.attemptReconnection()
+            .then(() => {
+              return this.sendRequest(method, params, retries - 1);
+            })
+            .then(resolve)
+            .catch(reject);
           return;
         }
         reject(new Error('MCP server not running'));
@@ -174,7 +195,9 @@ export class MCPClient extends EventEmitter {
           this.pendingRequests.delete(id);
           if (retries > 0) {
             // Retry the request
-            this.sendRequest(method, params, retries - 1).then(resolve).catch(reject);
+            this.sendRequest(method, params, retries - 1)
+              .then(resolve)
+              .catch(reject);
           } else {
             reject(new Error(`Request timeout for method: ${method}`));
           }
@@ -190,7 +213,9 @@ export class MCPClient extends EventEmitter {
         clearTimeout(timeout);
         this.pendingRequests.delete(id);
         if (retries > 0) {
-          this.sendRequest(method, params, retries - 1).then(resolve).catch(reject);
+          this.sendRequest(method, params, retries - 1)
+            .then(resolve)
+            .catch(reject);
         } else {
           reject(error);
         }
@@ -259,8 +284,9 @@ export class MCPClient extends EventEmitter {
 
     try {
       // Wait before attempting reconnection (exponential backoff)
-      const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
-      await new Promise(resolve => setTimeout(resolve, delay));
+      const delay =
+        this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
+      await new Promise((resolve) => setTimeout(resolve, delay));
 
       await this.start();
       this.reconnectAttempts = 0; // Reset on successful reconnection
@@ -290,7 +316,11 @@ export class MCPClient extends EventEmitter {
     return this.serverProcess !== null && !this.serverProcess.killed;
   }
 
-  getConnectionStatus(): { connected: boolean; reconnectAttempts: number; isReconnecting: boolean } {
+  getConnectionStatus(): {
+    connected: boolean;
+    reconnectAttempts: number;
+    isReconnecting: boolean;
+  } {
     return {
       connected: this.isRunning() && this.isInitialized,
       reconnectAttempts: this.reconnectAttempts,

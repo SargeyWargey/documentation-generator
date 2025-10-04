@@ -1,5 +1,9 @@
 import { TemplateValidator, ValidationResult } from '../TemplateValidator';
-import { Template, TemplateMetadata, TemplateVariable } from '../TemplateManager';
+import {
+  Template,
+  TemplateMetadata,
+  TemplateVariable,
+} from '../TemplateManager';
 
 describe('TemplateValidator', () => {
   let validator: TemplateValidator;
@@ -74,15 +78,20 @@ describe('TemplateValidator', () => {
             },
           ],
         },
-        content: '# {{title}}\n\nMissing: {{undefinedVariable}}\n\nAnother: {{anotherMissing}}',
+        content:
+          '# {{title}}\n\nMissing: {{undefinedVariable}}\n\nAnother: {{anotherMissing}}',
         filePath: '/templates/undefined-vars-template.md',
       };
 
       const result = validator.validateTemplate(template);
 
       expect(result.isValid).toBe(false);
-      expect(result.errors.some(e => e.includes('undefinedVariable'))).toBe(true);
-      expect(result.errors.some(e => e.includes('anotherMissing'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('undefinedVariable'))).toBe(
+        true
+      );
+      expect(result.errors.some((e) => e.includes('anotherMissing'))).toBe(
+        true
+      );
     });
 
     it('should detect unused variables', () => {
@@ -112,7 +121,9 @@ describe('TemplateValidator', () => {
       const result = validator.validateTemplate(template);
 
       expect(result.isValid).toBe(true);
-      expect(result.warnings.some(w => w.includes('unusedVariable'))).toBe(true);
+      expect(result.warnings.some((w) => w.includes('unusedVariable'))).toBe(
+        true
+      );
     });
   });
 
@@ -180,8 +191,10 @@ describe('TemplateValidator', () => {
       const result = validator.validateMetadata(metadata);
 
       expect(result.isValid).toBe(false);
-      expect(result.errors.some(e => e.includes('name is required'))).toBe(true);
-      expect(result.errors.some(e => e.includes('validVar'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('name is required'))).toBe(
+        true
+      );
+      expect(result.errors.some((e) => e.includes('validVar'))).toBe(true);
     });
 
     it('should validate content is not empty', () => {
@@ -204,13 +217,16 @@ describe('TemplateValidator', () => {
       const result = validator.validateMetadata(metadata);
 
       expect(result.isValid).toBe(true);
-      expect(result.warnings).toContain('Version should follow semantic versioning (e.g., 1.0.0)');
+      expect(result.warnings).toContain(
+        'Version should follow semantic versioning (e.g., 1.0.0)'
+      );
     });
   });
 
   describe('content validation', () => {
     it('should validate content with all variables used', () => {
-      const content = '# {{title}}\n\n{{description}}\n\nPriority: {{priority}}';
+      const content =
+        '# {{title}}\n\n{{description}}\n\nPriority: {{priority}}';
       const variables: TemplateVariable[] = [
         { name: 'title', description: 'Title', type: 'string' },
         { name: 'description', description: 'Description', type: 'string' },
@@ -234,8 +250,6 @@ describe('TemplateValidator', () => {
 
       expect(result.isValid).toBe(true);
     });
-
-
   });
 
   describe('template metadata validation integration', () => {
@@ -285,7 +299,5 @@ describe('TemplateValidator', () => {
 
       expect(result.isValid).toBe(true);
     });
-
-
   });
 });

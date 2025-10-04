@@ -104,7 +104,9 @@ export class ConfigurationService {
   /**
    * Update workspace configuration
    */
-  async updateWorkspaceConfig(updates: Partial<WorkspaceConfiguration>): Promise<void> {
+  async updateWorkspaceConfig(
+    updates: Partial<WorkspaceConfiguration>
+  ): Promise<void> {
     this.workspaceConfig = { ...this.workspaceConfig, ...updates };
     await this.saveWorkspaceConfiguration();
     this.notifyConfigurationChanged();
@@ -113,7 +115,9 @@ export class ConfigurationService {
   /**
    * Update user preferences
    */
-  async updateUserPreferences(updates: Partial<UserPreferences>): Promise<void> {
+  async updateUserPreferences(
+    updates: Partial<UserPreferences>
+  ): Promise<void> {
     this.userPreferences = { ...this.userPreferences, ...updates };
     await this.saveUserPreferences();
     this.notifyConfigurationChanged();
@@ -136,7 +140,9 @@ export class ConfigurationService {
     }
 
     // Check VS Code settings
-    const vscodeConfig = vscode.workspace.getConfiguration('documentationGenerator');
+    const vscodeConfig = vscode.workspace.getConfiguration(
+      'documentationGenerator'
+    );
     const vscodeValue = vscodeConfig.get<T>(key);
     if (vscodeValue !== undefined) {
       return vscodeValue;
@@ -148,7 +154,11 @@ export class ConfigurationService {
   /**
    * Set a configuration value
    */
-  async set(key: string, value: any, scope: 'workspace' | 'user' | 'vscode' = 'workspace'): Promise<void> {
+  async set(
+    key: string,
+    value: any,
+    scope: 'workspace' | 'user' | 'vscode' = 'workspace'
+  ): Promise<void> {
     switch (scope) {
       case 'workspace':
         this.setNestedValue(this.workspaceConfig, key, value);
@@ -159,7 +169,9 @@ export class ConfigurationService {
         await this.saveUserPreferences();
         break;
       case 'vscode':
-        const config = vscode.workspace.getConfiguration('documentationGenerator');
+        const config = vscode.workspace.getConfiguration(
+          'documentationGenerator'
+        );
         await config.update(key, value, vscode.ConfigurationTarget.Workspace);
         break;
     }
@@ -169,7 +181,9 @@ export class ConfigurationService {
   /**
    * Reset configuration to defaults
    */
-  async resetToDefaults(scope: 'workspace' | 'user' | 'all' = 'all'): Promise<void> {
+  async resetToDefaults(
+    scope: 'workspace' | 'user' | 'all' = 'all'
+  ): Promise<void> {
     if (scope === 'workspace' || scope === 'all') {
       this.workspaceConfig = this.getDefaultWorkspaceConfig();
       await this.saveWorkspaceConfiguration();
@@ -199,9 +213,13 @@ export class ConfigurationService {
         await this.updateUserPreferences(config.user);
       }
 
-      vscode.window.showInformationMessage('Configuration imported successfully');
+      vscode.window.showInformationMessage(
+        'Configuration imported successfully'
+      );
     } catch (error) {
-      vscode.window.showErrorMessage(`Failed to import configuration: ${error}`);
+      vscode.window.showErrorMessage(
+        `Failed to import configuration: ${error}`
+      );
     }
   }
 
@@ -213,16 +231,20 @@ export class ConfigurationService {
       const config = {
         workspace: this.workspaceConfig,
         user: this.userPreferences,
-        exportedAt: new Date().toISOString()
+        exportedAt: new Date().toISOString(),
       };
 
-      const exportPath = filePath || await this.selectExportPath();
+      const exportPath = filePath || (await this.selectExportPath());
       if (!exportPath) return;
 
       await fs.writeFile(exportPath, JSON.stringify(config, null, 2));
-      vscode.window.showInformationMessage(`Configuration exported to: ${exportPath}`);
+      vscode.window.showInformationMessage(
+        `Configuration exported to: ${exportPath}`
+      );
     } catch (error) {
-      vscode.window.showErrorMessage(`Failed to export configuration: ${error}`);
+      vscode.window.showErrorMessage(
+        `Failed to export configuration: ${error}`
+      );
     }
   }
 
@@ -270,7 +292,7 @@ export class ConfigurationService {
 
     return {
       isValid: errors.length === 0,
-      errors
+      errors,
     };
   }
 
@@ -296,7 +318,7 @@ export class ConfigurationService {
         '**/build/**',
         '**/.git/**',
         '**/out/**',
-        '**/*.log'
+        '**/*.log',
       ],
       includePatterns: ['**/*.ts', '**/*.js', '**/*.md', '**/*.json'],
       maxDepth: 10,
@@ -308,7 +330,7 @@ export class ConfigurationService {
         commandTimeout: 30000,
         retryAttempts: 3,
         cleanupAfterExecution: true,
-        mcpServerEnabled: true
+        mcpServerEnabled: true,
       },
       cacheEnabled: true,
       cacheTimeout: 300000, // 5 minutes
@@ -317,7 +339,7 @@ export class ConfigurationService {
       autoGenerateOnSave: false,
       showPreviewBeforeGenerate: true,
       confirmBeforeOverwrite: true,
-      enableTelemetry: true
+      enableTelemetry: true,
     };
   }
 
@@ -328,14 +350,14 @@ export class ConfigurationService {
       notifications: {
         success: true,
         warnings: true,
-        errors: true
+        errors: true,
       },
       ui: {
         sidebarPosition: 'left',
         showTips: true,
-        compactMode: false
+        compactMode: false,
       },
-      shortcuts: {}
+      shortcuts: {},
     };
   }
 
@@ -356,7 +378,10 @@ export class ConfigurationService {
       const configPath = this.getUserConfigPath();
       const content = await fs.readFile(configPath, 'utf-8');
       const preferences = JSON.parse(content);
-      this.userPreferences = { ...this.getDefaultUserPreferences(), ...preferences };
+      this.userPreferences = {
+        ...this.getDefaultUserPreferences(),
+        ...preferences,
+      };
     } catch (error) {
       // Preferences file doesn't exist or is invalid, use defaults
       this.userPreferences = this.getDefaultUserPreferences();
@@ -367,7 +392,10 @@ export class ConfigurationService {
     try {
       const configPath = this.getWorkspaceConfigPath();
       await fs.mkdir(path.dirname(configPath), { recursive: true });
-      await fs.writeFile(configPath, JSON.stringify(this.workspaceConfig, null, 2));
+      await fs.writeFile(
+        configPath,
+        JSON.stringify(this.workspaceConfig, null, 2)
+      );
     } catch (error) {
       console.error('Failed to save workspace configuration:', error);
     }
@@ -377,7 +405,10 @@ export class ConfigurationService {
     try {
       const configPath = this.getUserConfigPath();
       await fs.mkdir(path.dirname(configPath), { recursive: true });
-      await fs.writeFile(configPath, JSON.stringify(this.userPreferences, null, 2));
+      await fs.writeFile(
+        configPath,
+        JSON.stringify(this.userPreferences, null, 2)
+      );
     } catch (error) {
       console.error('Failed to save user preferences:', error);
     }
@@ -386,19 +417,30 @@ export class ConfigurationService {
   private getWorkspaceConfigPath(): string {
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
     if (workspaceFolder) {
-      return path.join(workspaceFolder.uri.fsPath, '.vscode', 'documentation-generator.json');
+      return path.join(
+        workspaceFolder.uri.fsPath,
+        '.vscode',
+        'documentation-generator.json'
+      );
     }
-    return path.join(this.context.globalStorageUri?.fsPath || '', 'workspace-config.json');
+    return path.join(
+      this.context.globalStorageUri?.fsPath || '',
+      'workspace-config.json'
+    );
   }
 
   private getUserConfigPath(): string {
-    return path.join(this.context.globalStorageUri?.fsPath || '', 'user-preferences.json');
+    return path.join(
+      this.context.globalStorageUri?.fsPath || '',
+      'user-preferences.json'
+    );
   }
 
   private setupConfigurationWatcher(): void {
     const workspaceConfigPath = this.getWorkspaceConfigPath();
 
-    this.configWatcher = vscode.workspace.createFileSystemWatcher(workspaceConfigPath);
+    this.configWatcher =
+      vscode.workspace.createFileSystemWatcher(workspaceConfigPath);
 
     this.configWatcher.onDidChange(async () => {
       await this.loadWorkspaceConfiguration();
@@ -413,7 +455,9 @@ export class ConfigurationService {
 
   private notifyConfigurationChanged(): void {
     // Emit configuration change event
-    vscode.commands.executeCommand('documentationGenerator.configurationChanged');
+    vscode.commands.executeCommand(
+      'documentationGenerator.configurationChanged'
+    );
   }
 
   private getNestedValue(obj: any, path: string): any {
@@ -437,8 +481,8 @@ export class ConfigurationService {
       defaultUri: vscode.Uri.file('documentation-generator-config.json'),
       filters: {
         'JSON files': ['json'],
-        'All files': ['*']
-      }
+        'All files': ['*'],
+      },
     });
     return result?.fsPath;
   }

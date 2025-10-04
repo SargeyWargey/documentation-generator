@@ -18,17 +18,21 @@ export class VariableDefinitionEditor {
   /**
    * Show a detailed variable definition dialog
    */
-  async showVariableEditor(options: VariableEditorOptions): Promise<TemplateVariable | undefined> {
+  async showVariableEditor(
+    options: VariableEditorOptions
+  ): Promise<TemplateVariable | undefined> {
     const { variable, mode, existingVariables } = options;
 
     // Create and show the webview panel for variable editing
     const panel = vscode.window.createWebviewPanel(
       'variableEditor',
-      mode === 'create' ? 'Create Variable' : `Edit Variable: ${variable?.name}`,
+      mode === 'create'
+        ? 'Create Variable'
+        : `Edit Variable: ${variable?.name}`,
       vscode.ViewColumn.Two,
       {
         enableScripts: true,
-        retainContextWhenHidden: true
+        retainContextWhenHidden: true,
       }
     );
 
@@ -41,7 +45,10 @@ export class VariableDefinitionEditor {
 
         switch (message.command) {
           case 'save':
-            const validationResult = this.validateVariable(message.data, existingVariables);
+            const validationResult = this.validateVariable(
+              message.data,
+              existingVariables
+            );
             if (validationResult.isValid) {
               resolved = true;
               panel.dispose();
@@ -50,7 +57,7 @@ export class VariableDefinitionEditor {
               // Send validation errors back to webview
               panel.webview.postMessage({
                 command: 'validationErrors',
-                data: validationResult.errors
+                data: validationResult.errors,
               });
             }
             break;
@@ -60,10 +67,13 @@ export class VariableDefinitionEditor {
             resolve(undefined);
             break;
           case 'validate':
-            const result = this.validateVariable(message.data, existingVariables);
+            const result = this.validateVariable(
+              message.data,
+              existingVariables
+            );
             panel.webview.postMessage({
               command: 'validationResult',
-              data: result
+              data: result,
             });
             break;
         }
@@ -78,7 +88,10 @@ export class VariableDefinitionEditor {
       });
 
       // Set webview content
-      panel.webview.html = this.generateVariableEditorHTML(variable, existingVariables);
+      panel.webview.html = this.generateVariableEditorHTML(
+        variable,
+        existingVariables
+      );
     });
   }
 
@@ -96,14 +109,14 @@ export class VariableDefinitionEditor {
           return 'Variable name must start with a letter and contain only letters, numbers, and underscores';
         }
         return undefined;
-      }
+      },
     });
 
     if (!name) return undefined;
 
     const description = await vscode.window.showInputBox({
       prompt: 'Variable description',
-      placeHolder: 'Describe what this variable is for'
+      placeHolder: 'Describe what this variable is for',
     });
 
     if (!description) return undefined;
@@ -113,11 +126,11 @@ export class VariableDefinitionEditor {
       { label: 'Number', detail: 'Numeric value' },
       { label: 'Boolean', detail: 'True/false value' },
       { label: 'Date', detail: 'Date value' },
-      { label: 'Select', detail: 'Choose from predefined options' }
+      { label: 'Select', detail: 'Choose from predefined options' },
     ];
 
     const selectedType = await vscode.window.showQuickPick(typeOptions, {
-      placeHolder: 'Select variable type'
+      placeHolder: 'Select variable type',
     });
 
     if (!selectedType) return undefined;
@@ -129,11 +142,14 @@ export class VariableDefinitionEditor {
     if (type === 'select') {
       const optionsInput = await vscode.window.showInputBox({
         prompt: 'Enter options (comma-separated)',
-        placeHolder: 'Option 1, Option 2, Option 3'
+        placeHolder: 'Option 1, Option 2, Option 3',
       });
 
       if (optionsInput) {
-        options = optionsInput.split(',').map(s => s.trim()).filter(s => s);
+        options = optionsInput
+          .split(',')
+          .map((s) => s.trim())
+          .filter((s) => s);
       }
     }
 
@@ -141,7 +157,7 @@ export class VariableDefinitionEditor {
     const requiredChoice = await vscode.window.showQuickPick(
       [
         { label: 'Required', detail: 'User must provide this variable' },
-        { label: 'Optional', detail: 'Variable has a default or can be empty' }
+        { label: 'Optional', detail: 'Variable has a default or can be empty' },
       ],
       { placeHolder: 'Is this variable required?' }
     );
@@ -153,7 +169,7 @@ export class VariableDefinitionEditor {
     if (!required) {
       const defaultInput = await vscode.window.showInputBox({
         prompt: 'Default value (optional)',
-        placeHolder: type === 'select' ? options?.[0] : `Default ${type} value`
+        placeHolder: type === 'select' ? options?.[0] : `Default ${type} value`,
       });
 
       if (defaultInput) {
@@ -167,14 +183,17 @@ export class VariableDefinitionEditor {
       type,
       required,
       default: defaultValue,
-      options
+      options,
     };
   }
 
   /**
    * Validate a variable definition
    */
-  private validateVariable(variable: TemplateVariable, existingVariables: TemplateVariable[]): { isValid: boolean; errors: string[] } {
+  private validateVariable(
+    variable: TemplateVariable,
+    existingVariables: TemplateVariable[]
+  ): { isValid: boolean; errors: string[] } {
     const errors: string[] = [];
 
     // Check required fields
@@ -192,11 +211,16 @@ export class VariableDefinitionEditor {
 
     // Validate name format
     if (variable.name && !/^[a-zA-Z][a-zA-Z0-9_]*$/.test(variable.name)) {
-      errors.push('Variable name must start with a letter and contain only letters, numbers, and underscores');
+      errors.push(
+        'Variable name must start with a letter and contain only letters, numbers, and underscores'
+      );
     }
 
     // Check for duplicate names
-    if (variable.name && existingVariables.some(v => v.name === variable.name)) {
+    if (
+      variable.name &&
+      existingVariables.some((v) => v.name === variable.name)
+    ) {
       errors.push(`Variable name '${variable.name}' already exists`);
     }
 
@@ -204,14 +228,18 @@ export class VariableDefinitionEditor {
     if (variable.type === 'select') {
       if (!variable.options || variable.options.length === 0) {
         errors.push('Select variables must have at least one option');
-      } else if (variable.options.some(opt => !opt || opt.trim() === '')) {
+      } else if (variable.options.some((opt) => !opt || opt.trim() === '')) {
         errors.push('All select options must be non-empty');
       }
     }
 
     // Validate default value
     if (variable.default !== undefined) {
-      const isValid = this.isValidDefaultValue(variable.default, variable.type, variable.options);
+      const isValid = this.isValidDefaultValue(
+        variable.default,
+        variable.type,
+        variable.options
+      );
       if (!isValid) {
         errors.push(`Default value is not valid for type '${variable.type}'`);
       }
@@ -219,14 +247,18 @@ export class VariableDefinitionEditor {
 
     return {
       isValid: errors.length === 0,
-      errors
+      errors,
     };
   }
 
   /**
    * Check if default value is valid for the given type
    */
-  private isValidDefaultValue(value: any, type: string, options?: string[]): boolean {
+  private isValidDefaultValue(
+    value: any,
+    type: string,
+    options?: string[]
+  ): boolean {
     switch (type) {
       case 'string':
         return typeof value === 'string';
@@ -267,14 +299,17 @@ export class VariableDefinitionEditor {
   /**
    * Generate HTML for the variable editor webview
    */
-  private generateVariableEditorHTML(variable?: TemplateVariable, _existingVariables: TemplateVariable[] = []): string {
+  private generateVariableEditorHTML(
+    variable?: TemplateVariable,
+    _existingVariables: TemplateVariable[] = []
+  ): string {
     const varData = variable || {
       name: '',
       description: '',
       type: 'string' as const,
       required: false,
       default: undefined,
-      options: undefined
+      options: undefined,
     };
 
     return `<!DOCTYPE html>

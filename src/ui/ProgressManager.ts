@@ -12,7 +12,10 @@ export interface ProgressOptions {
 }
 
 export class ProgressManager {
-  private activeProgress: vscode.Progress<{ message?: string; increment?: number }> | null = null;
+  private activeProgress: vscode.Progress<{
+    message?: string;
+    increment?: number;
+  }> | null = null;
   private progressToken: vscode.CancellationToken | null = null;
 
   /**
@@ -20,30 +23,36 @@ export class ProgressManager {
    */
   async showProgress<T>(
     title: string,
-    task: (progress: vscode.Progress<ProgressStep>, token: vscode.CancellationToken) => Thenable<T>,
+    task: (
+      progress: vscode.Progress<ProgressStep>,
+      token: vscode.CancellationToken
+    ) => Thenable<T>,
     options?: ProgressOptions
   ): Promise<T> {
     const progressOptions: vscode.ProgressOptions = {
       location: options?.location || vscode.ProgressLocation.Notification,
       title: options?.title || title,
-      cancellable: options?.cancellable || false
+      cancellable: options?.cancellable || false,
     };
 
-    return vscode.window.withProgress(progressOptions, async (progress, token) => {
-      this.activeProgress = progress;
-      this.progressToken = token;
+    return vscode.window.withProgress(
+      progressOptions,
+      async (progress, token) => {
+        this.activeProgress = progress;
+        this.progressToken = token;
 
-      try {
-        const result = await task(progress, token);
-        this.activeProgress = null;
-        this.progressToken = null;
-        return result;
-      } catch (error) {
-        this.activeProgress = null;
-        this.progressToken = null;
-        throw error;
+        try {
+          const result = await task(progress, token);
+          this.activeProgress = null;
+          this.progressToken = null;
+          return result;
+        } catch (error) {
+          this.activeProgress = null;
+          this.progressToken = null;
+          throw error;
+        }
       }
-    });
+    );
   }
 
   /**
@@ -53,7 +62,7 @@ export class ProgressManager {
     task: (progress: vscode.Progress<ProgressStep>) => Thenable<T>
   ): Promise<T> {
     return this.showProgress('Processing...', task, {
-      location: vscode.ProgressLocation.Window
+      location: vscode.ProgressLocation.Window,
     });
   }
 
@@ -62,12 +71,15 @@ export class ProgressManager {
    */
   async showModalProgress<T>(
     title: string,
-    task: (progress: vscode.Progress<ProgressStep>, token: vscode.CancellationToken) => Thenable<T>,
+    task: (
+      progress: vscode.Progress<ProgressStep>,
+      token: vscode.CancellationToken
+    ) => Thenable<T>,
     cancellable: boolean = true
   ): Promise<T> {
     return this.showProgress(title, task, {
       location: vscode.ProgressLocation.Notification,
-      cancellable
+      cancellable,
     });
   }
 
@@ -120,11 +132,12 @@ export class SteppedProgress {
    */
   nextStep(message?: string): ProgressStep {
     this.currentStep++;
-    const increment = this.currentStep <= this.totalSteps ? this.stepIncrement : 0;
+    const increment =
+      this.currentStep <= this.totalSteps ? this.stepIncrement : 0;
 
     return {
       increment,
-      message: message || `Step ${this.currentStep} of ${this.totalSteps}...`
+      message: message || `Step ${this.currentStep} of ${this.totalSteps}...`,
     };
   }
 
@@ -141,7 +154,7 @@ export class SteppedProgress {
 
     return {
       increment: increment > 0 ? increment : 0,
-      message: message || `Step ${step} of ${this.totalSteps}...`
+      message: message || `Step ${step} of ${this.totalSteps}...`,
     };
   }
 
@@ -174,11 +187,13 @@ export class ProgressUtils {
   /**
    * Create a progress reporter for file operations
    */
-  static createFileProgress(files: string[]): (fileIndex: number, fileName: string) => ProgressStep {
+  static createFileProgress(
+    files: string[]
+  ): (fileIndex: number, fileName: string) => ProgressStep {
     const totalFiles = files.length;
     return (fileIndex: number, fileName: string) => ({
       increment: (1 / totalFiles) * 100,
-      message: `Processing ${fileName} (${fileIndex + 1}/${totalFiles})`
+      message: `Processing ${fileName} (${fileIndex + 1}/${totalFiles})`,
     });
   }
 
@@ -204,7 +219,9 @@ export class ProgressUtils {
           throw lastError;
         }
         // Wait before retrying (exponential backoff)
-        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+        await new Promise((resolve) =>
+          setTimeout(resolve, Math.pow(2, attempt) * 1000)
+        );
       }
     }
 
@@ -223,7 +240,7 @@ export class ProgressUtils {
 
     for (const step of steps) {
       progress.report(stepProgress.nextStep(step));
-      await new Promise(resolve => setTimeout(resolve, delayMs));
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
   }
 }

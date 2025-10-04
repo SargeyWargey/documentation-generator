@@ -60,7 +60,8 @@ export class TemplateMarketplace {
   private shareManager: TemplateShareManager;
   private validator: TemplateValidator;
   private readonly cacheDirectory: string;
-  private readonly marketplaceEndpoint: string = 'https://api.template-marketplace.com'; // Placeholder
+  private readonly marketplaceEndpoint: string =
+    'https://api.template-marketplace.com'; // Placeholder
 
   constructor(
     templateManager: TemplateManager,
@@ -98,7 +99,7 @@ export class TemplateMarketplace {
       {
         enableScripts: true,
         retainContextWhenHidden: true,
-        localResourceRoots: []
+        localResourceRoots: [],
       }
     );
 
@@ -136,23 +137,44 @@ export class TemplateMarketplace {
   /**
    * Search templates in marketplace
    */
-  async searchTemplates(query: string, filters?: SearchFilter): Promise<MarketplaceTemplate[]> {
+  async searchTemplates(
+    query: string,
+    filters?: SearchFilter
+  ): Promise<MarketplaceTemplate[]> {
     // In a real implementation, this would make API calls to the marketplace
     // For now, return mock data
-    return this.getMockTemplates().filter(template => {
+    return this.getMockTemplates().filter((template) => {
       // Apply search and filters
-      const matchesQuery = !query ||
+      const matchesQuery =
+        !query ||
         template.name.toLowerCase().includes(query.toLowerCase()) ||
         template.description.toLowerCase().includes(query.toLowerCase()) ||
-        template.tags.some(tag => tag.toLowerCase().includes(query.toLowerCase()));
+        template.tags.some((tag) =>
+          tag.toLowerCase().includes(query.toLowerCase())
+        );
 
-      const matchesCategory = !filters?.category || template.category === filters.category;
-      const matchesTags = !filters?.tags || filters.tags.some(tag => template.tags.includes(tag));
-      const matchesRating = !filters?.rating || template.rating >= filters.rating;
-      const matchesVerified = filters?.verified === undefined || template.verified === filters.verified;
-      const matchesFeatured = filters?.featured === undefined || template.featured === filters.featured;
+      const matchesCategory =
+        !filters?.category || template.category === filters.category;
+      const matchesTags =
+        !filters?.tags ||
+        filters.tags.some((tag) => template.tags.includes(tag));
+      const matchesRating =
+        !filters?.rating || template.rating >= filters.rating;
+      const matchesVerified =
+        filters?.verified === undefined ||
+        template.verified === filters.verified;
+      const matchesFeatured =
+        filters?.featured === undefined ||
+        template.featured === filters.featured;
 
-      return matchesQuery && matchesCategory && matchesTags && matchesRating && matchesVerified && matchesFeatured;
+      return (
+        matchesQuery &&
+        matchesCategory &&
+        matchesTags &&
+        matchesRating &&
+        matchesVerified &&
+        matchesFeatured
+      );
     });
   }
 
@@ -167,36 +189,36 @@ export class TemplateMarketplace {
         name: 'Documentation',
         description: 'Templates for creating documentation',
         templateCount: 25,
-        icon: 'book'
+        icon: 'book',
       },
       {
         id: 'planning',
         name: 'Planning',
         description: 'Project planning and requirement templates',
         templateCount: 18,
-        icon: 'project'
+        icon: 'project',
       },
       {
         id: 'meeting',
         name: 'Meeting Notes',
         description: 'Templates for meeting summaries and notes',
         templateCount: 12,
-        icon: 'comment-discussion'
+        icon: 'comment-discussion',
       },
       {
         id: 'technical',
         name: 'Technical Specs',
         description: 'Technical specification templates',
         templateCount: 15,
-        icon: 'gear'
+        icon: 'gear',
       },
       {
         id: 'business',
         name: 'Business',
         description: 'Business analysis and process templates',
         templateCount: 10,
-        icon: 'briefcase'
-      }
+        icon: 'briefcase',
+      },
     ];
   }
 
@@ -205,7 +227,9 @@ export class TemplateMarketplace {
    */
   async installTemplate(templateId: string): Promise<void> {
     // In a real implementation, this would download the template
-    const marketplaceTemplate = this.getMockTemplates().find(t => t.id === templateId);
+    const marketplaceTemplate = this.getMockTemplates().find(
+      (t) => t.id === templateId
+    );
     if (!marketplaceTemplate) {
       throw new Error('Template not found in marketplace');
     }
@@ -219,10 +243,10 @@ export class TemplateMarketplace {
         version: marketplaceTemplate.version,
         author: marketplaceTemplate.author,
         category: marketplaceTemplate.category,
-        tags: marketplaceTemplate.tags
+        tags: marketplaceTemplate.tags,
       },
       content: this.generateMockTemplateContent(marketplaceTemplate),
-      filePath: ''
+      filePath: '',
     };
 
     // Install the template
@@ -234,7 +258,9 @@ export class TemplateMarketplace {
     await this.templateManager.installTemplate(tempFile);
     await fs.unlink(tempFile); // Clean up
 
-    vscode.window.showInformationMessage(`Template '${marketplaceTemplate.name}' installed successfully`);
+    vscode.window.showInformationMessage(
+      `Template '${marketplaceTemplate.name}' installed successfully`
+    );
   }
 
   /**
@@ -249,7 +275,9 @@ export class TemplateMarketplace {
     // Validate template for marketplace standards
     const validation = this.validator.validateTemplate(template);
     if (!validation.isValid) {
-      vscode.window.showErrorMessage(`Template validation failed: ${validation.errors.join(', ')}`);
+      vscode.window.showErrorMessage(
+        `Template validation failed: ${validation.errors.join(', ')}`
+      );
       return;
     }
 
@@ -260,7 +288,7 @@ export class TemplateMarketplace {
       vscode.ViewColumn.One,
       {
         enableScripts: true,
-        retainContextWhenHidden: true
+        retainContextWhenHidden: true,
       }
     );
 
@@ -277,17 +305,23 @@ export class TemplateMarketplace {
   /**
    * Handle search request
    */
-  private async handleSearch(panel: vscode.WebviewPanel, data: any): Promise<void> {
+  private async handleSearch(
+    panel: vscode.WebviewPanel,
+    data: any
+  ): Promise<void> {
     try {
-      const templates = await this.searchTemplates(data.query || '', data.filters);
+      const templates = await this.searchTemplates(
+        data.query || '',
+        data.filters
+      );
       panel.webview.postMessage({
         command: 'searchResults',
-        data: templates
+        data: templates,
       });
     } catch (error) {
       panel.webview.postMessage({
         command: 'error',
-        data: { message: `Search failed: ${error}` }
+        data: { message: `Search failed: ${error}` },
       });
     }
   }
@@ -295,19 +329,24 @@ export class TemplateMarketplace {
   /**
    * Handle get template details
    */
-  private async handleGetTemplate(panel: vscode.WebviewPanel, data: { templateId: string }): Promise<void> {
+  private async handleGetTemplate(
+    panel: vscode.WebviewPanel,
+    data: { templateId: string }
+  ): Promise<void> {
     try {
-      const template = this.getMockTemplates().find(t => t.id === data.templateId);
+      const template = this.getMockTemplates().find(
+        (t) => t.id === data.templateId
+      );
       if (template) {
         panel.webview.postMessage({
           command: 'templateDetails',
-          data: template
+          data: template,
         });
       }
     } catch (error) {
       panel.webview.postMessage({
         command: 'error',
-        data: { message: `Failed to get template: ${error}` }
+        data: { message: `Failed to get template: ${error}` },
       });
     }
   }
@@ -315,17 +354,20 @@ export class TemplateMarketplace {
   /**
    * Handle template installation
    */
-  private async handleInstallTemplate(panel: vscode.WebviewPanel, data: { templateId: string }): Promise<void> {
+  private async handleInstallTemplate(
+    panel: vscode.WebviewPanel,
+    data: { templateId: string }
+  ): Promise<void> {
     try {
       await this.installTemplate(data.templateId);
       panel.webview.postMessage({
         command: 'installSuccess',
-        data: { templateId: data.templateId }
+        data: { templateId: data.templateId },
       });
     } catch (error) {
       panel.webview.postMessage({
         command: 'error',
-        data: { message: `Installation failed: ${error}` }
+        data: { message: `Installation failed: ${error}` },
       });
     }
   }
@@ -338,12 +380,12 @@ export class TemplateMarketplace {
       const categories = await this.getCategories();
       panel.webview.postMessage({
         command: 'categories',
-        data: categories
+        data: categories,
       });
     } catch (error) {
       panel.webview.postMessage({
         command: 'error',
-        data: { message: `Failed to get categories: ${error}` }
+        data: { message: `Failed to get categories: ${error}` },
       });
     }
   }
@@ -358,14 +400,14 @@ export class TemplateMarketplace {
       return;
     }
 
-    const templateItems = templates.map(t => ({
+    const templateItems = templates.map((t) => ({
       label: t.metadata.name,
       description: t.metadata.description,
-      template: t
+      template: t,
     }));
 
     const selected = await vscode.window.showQuickPick(templateItems, {
-      placeHolder: 'Select a template to submit to marketplace'
+      placeHolder: 'Select a template to submit to marketplace',
     });
 
     if (selected) {
@@ -376,7 +418,11 @@ export class TemplateMarketplace {
   /**
    * Handle rate template
    */
-  private async handleRateTemplate(_data: { templateId: string; rating: number; review?: string }): Promise<void> {
+  private async handleRateTemplate(_data: {
+    templateId: string;
+    rating: number;
+    review?: string;
+  }): Promise<void> {
     // In a real implementation, this would submit the rating to the marketplace API
     vscode.window.showInformationMessage('Thank you for your rating!');
   }
@@ -384,7 +430,10 @@ export class TemplateMarketplace {
   /**
    * Handle template submission
    */
-  private async handleTemplateSubmission(_template: Template, _submissionData: any): Promise<void> {
+  private async handleTemplateSubmission(
+    _template: Template,
+    _submissionData: any
+  ): Promise<void> {
     // In a real implementation, this would upload the template to the marketplace
     vscode.window.showInformationMessage(
       `Template '${_template.metadata.name}' submitted for review. You'll be notified when it's approved.`
@@ -399,7 +448,8 @@ export class TemplateMarketplace {
       {
         id: 'api-documentation',
         name: 'API Documentation Template',
-        description: 'Comprehensive template for documenting REST APIs with examples and schemas',
+        description:
+          'Comprehensive template for documenting REST APIs with examples and schemas',
         author: 'DevTools Team',
         version: '2.1.0',
         category: 'documentation',
@@ -411,12 +461,13 @@ export class TemplateMarketplace {
         license: 'MIT',
         featured: true,
         verified: true,
-        compatibility: ['vscode']
+        compatibility: ['vscode'],
       },
       {
         id: 'project-prd',
         name: 'Product Requirements Document',
-        description: 'Professional PRD template with user stories, acceptance criteria, and success metrics',
+        description:
+          'Professional PRD template with user stories, acceptance criteria, and success metrics',
         author: 'PM Collective',
         version: '1.3.2',
         category: 'planning',
@@ -428,12 +479,13 @@ export class TemplateMarketplace {
         license: 'Apache-2.0',
         featured: true,
         verified: true,
-        compatibility: ['vscode']
+        compatibility: ['vscode'],
       },
       {
         id: 'sprint-retrospective',
         name: 'Sprint Retrospective Template',
-        description: 'Structured template for agile sprint retrospectives with action items',
+        description:
+          'Structured template for agile sprint retrospectives with action items',
         author: 'Agile Masters',
         version: '1.0.5',
         category: 'meeting',
@@ -445,12 +497,13 @@ export class TemplateMarketplace {
         license: 'CC-BY-4.0',
         featured: false,
         verified: true,
-        compatibility: ['vscode']
+        compatibility: ['vscode'],
       },
       {
         id: 'technical-architecture',
         name: 'Technical Architecture Document',
-        description: 'Detailed template for system architecture documentation with diagrams and decisions',
+        description:
+          'Detailed template for system architecture documentation with diagrams and decisions',
         author: 'Architecture Guild',
         version: '3.0.1',
         category: 'technical',
@@ -462,15 +515,17 @@ export class TemplateMarketplace {
         license: 'MIT',
         featured: false,
         verified: true,
-        compatibility: ['vscode']
-      }
+        compatibility: ['vscode'],
+      },
     ];
   }
 
   /**
    * Generate mock template content
    */
-  private generateMockTemplateContent(marketplaceTemplate: MarketplaceTemplate): string {
+  private generateMockTemplateContent(
+    marketplaceTemplate: MarketplaceTemplate
+  ): string {
     return `# {{title}}
 
 ## Overview

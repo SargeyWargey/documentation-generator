@@ -2,7 +2,6 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 
 export class DialogHelper {
-
   /**
    * Shows a folder selection dialog
    */
@@ -11,7 +10,7 @@ export class DialogHelper {
       canSelectMany: false,
       canSelectFolders: true,
       canSelectFiles: false,
-      openLabel: 'Select Folder for Documentation'
+      openLabel: 'Select Folder for Documentation',
     };
 
     const folderUri = await vscode.window.showOpenDialog(options);
@@ -21,16 +20,21 @@ export class DialogHelper {
 
     // If no folder selected via dialog, offer workspace folders
     if (vscode.workspace.workspaceFolders) {
-      const workspaceFolders = vscode.workspace.workspaceFolders.map(folder => ({
-        label: folder.name,
-        description: folder.uri.fsPath,
-        detail: path.basename(folder.uri.fsPath)
-      }));
+      const workspaceFolders = vscode.workspace.workspaceFolders.map(
+        (folder) => ({
+          label: folder.name,
+          description: folder.uri.fsPath,
+          detail: path.basename(folder.uri.fsPath),
+        })
+      );
 
-      const selectedWorkspace = await vscode.window.showQuickPick(workspaceFolders, {
-        placeHolder: 'Select a workspace folder or cancel to browse...',
-        title: 'Choose Folder for Documentation Generation'
-      });
+      const selectedWorkspace = await vscode.window.showQuickPick(
+        workspaceFolders,
+        {
+          placeHolder: 'Select a workspace folder or cancel to browse...',
+          title: 'Choose Folder for Documentation Generation',
+        }
+      );
 
       if (selectedWorkspace) {
         return selectedWorkspace.description;
@@ -48,35 +52,39 @@ export class DialogHelper {
       {
         label: '📋 Help Documentation',
         description: 'Generate user-friendly help documentation',
-        detail: 'Creates comprehensive help docs with API references, getting started guides, and troubleshooting'
+        detail:
+          'Creates comprehensive help docs with API references, getting started guides, and troubleshooting',
       },
       {
         label: '📊 PRD (Product Requirements Document)',
         description: 'Generate product requirements documentation',
-        detail: 'Creates business-focused PRD with user stories, acceptance criteria, and success metrics'
+        detail:
+          'Creates business-focused PRD with user stories, acceptance criteria, and success metrics',
       },
       {
         label: '⚙️ Technical Specification',
         description: 'Generate technical architecture documentation',
-        detail: 'Creates detailed technical specs with architecture diagrams, API docs, and implementation details'
+        detail:
+          'Creates detailed technical specs with architecture diagrams, API docs, and implementation details',
       },
       {
         label: '🤝 Meeting Summary',
         description: 'Generate meeting notes and action items',
-        detail: 'Creates structured meeting summaries with decisions, action items, and follow-ups'
+        detail:
+          'Creates structured meeting summaries with decisions, action items, and follow-ups',
       },
       {
         label: '📝 Custom Template',
         description: 'Use a custom template',
-        detail: 'Select from your custom templates or create a new one'
-      }
+        detail: 'Select from your custom templates or create a new one',
+      },
     ];
 
     const selectedTemplate = await vscode.window.showQuickPick(templates, {
       placeHolder: 'Choose a documentation template',
       title: 'Select Documentation Template',
       matchOnDescription: true,
-      matchOnDetail: true
+      matchOnDetail: true,
     });
 
     if (selectedTemplate) {
@@ -86,10 +94,10 @@ export class DialogHelper {
         'PRD (Product Requirements Document)': 'prd',
         'Technical Specification': 'technical',
         'Meeting Summary': 'meeting',
-        'Custom Template': 'custom'
+        'Custom Template': 'custom',
       };
 
-      const templateKey = Object.keys(templateMap).find(key =>
+      const templateKey = Object.keys(templateMap).find((key) =>
         selectedTemplate.label.includes(key)
       );
 
@@ -107,34 +115,37 @@ export class DialogHelper {
       {
         label: '⚙️ Extension Settings',
         description: 'Open extension settings',
-        action: 'settings'
+        action: 'settings',
       },
       {
         label: '📁 Template Directory',
         description: 'Configure custom template directory',
-        action: 'templateDir'
+        action: 'templateDir',
       },
       {
         label: '📤 Output Settings',
         description: 'Configure output directory and naming',
-        action: 'output'
+        action: 'output',
       },
       {
         label: '🔗 Claude Integration',
         description: 'Configure Claude Code integration',
-        action: 'claude'
-      }
+        action: 'claude',
+      },
     ];
 
     const selected = await vscode.window.showQuickPick(options, {
       placeHolder: 'Choose configuration option',
-      title: 'Documentation Generator Configuration'
+      title: 'Documentation Generator Configuration',
     });
 
     if (selected) {
       switch (selected.action) {
         case 'settings':
-          vscode.commands.executeCommand('workbench.action.openSettings', 'documentation-generator');
+          vscode.commands.executeCommand(
+            'workbench.action.openSettings',
+            'documentation-generator'
+          );
           break;
         case 'templateDir':
           await this.configureTemplateDirectory();
@@ -159,14 +170,22 @@ export class DialogHelper {
       canSelectMany: false,
       canSelectFolders: true,
       canSelectFiles: false,
-      openLabel: 'Select Template Directory'
+      openLabel: 'Select Template Directory',
     };
 
     const folderUri = await vscode.window.showOpenDialog(options);
     if (folderUri && folderUri[0]) {
-      const config = vscode.workspace.getConfiguration('documentation-generator');
-      await config.update('templateDirectory', folderUri[0].fsPath, vscode.ConfigurationTarget.Global);
-      vscode.window.showInformationMessage(`Template directory set to: ${folderUri[0].fsPath}`);
+      const config = vscode.workspace.getConfiguration(
+        'documentation-generator'
+      );
+      await config.update(
+        'templateDirectory',
+        folderUri[0].fsPath,
+        vscode.ConfigurationTarget.Global
+      );
+      vscode.window.showInformationMessage(
+        `Template directory set to: ${folderUri[0].fsPath}`
+      );
     }
   }
 
@@ -177,13 +196,21 @@ export class DialogHelper {
     const outputName = await vscode.window.showInputBox({
       prompt: 'Enter default output filename pattern',
       value: 'generated-docs-{template}-{date}',
-      placeHolder: 'Use {template}, {date}, {folder} as variables'
+      placeHolder: 'Use {template}, {date}, {folder} as variables',
     });
 
     if (outputName) {
-      const config = vscode.workspace.getConfiguration('documentation-generator');
-      await config.update('outputNamePattern', outputName, vscode.ConfigurationTarget.Global);
-      vscode.window.showInformationMessage(`Output pattern set to: ${outputName}`);
+      const config = vscode.workspace.getConfiguration(
+        'documentation-generator'
+      );
+      await config.update(
+        'outputNamePattern',
+        outputName,
+        vscode.ConfigurationTarget.Global
+      );
+      vscode.window.showInformationMessage(
+        `Output pattern set to: ${outputName}`
+      );
     }
   }
 
@@ -195,25 +222,33 @@ export class DialogHelper {
       {
         label: 'Slash Commands',
         description: 'Use Claude Code slash commands for generation',
-        picked: true
+        picked: true,
       },
       {
         label: 'MCP Server',
         description: 'Use MCP server for real-time integration',
-        picked: false
-      }
+        picked: false,
+      },
     ];
 
     const selected = await vscode.window.showQuickPick(integrationOptions, {
       placeHolder: 'Choose integration method',
       title: 'Claude Code Integration Method',
-      canPickMany: false
+      canPickMany: false,
     });
 
     if (selected) {
-      const config = vscode.workspace.getConfiguration('documentation-generator');
-      await config.update('claudeIntegrationMethod', selected.label.toLowerCase().replace(' ', '-'), vscode.ConfigurationTarget.Global);
-      vscode.window.showInformationMessage(`Claude integration set to: ${selected.label}`);
+      const config = vscode.workspace.getConfiguration(
+        'documentation-generator'
+      );
+      await config.update(
+        'claudeIntegrationMethod',
+        selected.label.toLowerCase().replace(' ', '-'),
+        vscode.ConfigurationTarget.Global
+      );
+      vscode.window.showInformationMessage(
+        `Claude integration set to: ${selected.label}`
+      );
     }
   }
 
@@ -230,7 +265,9 @@ export class DialogHelper {
 
     switch (action) {
       case 'Show Details':
-        const outputChannel = vscode.window.createOutputChannel('Documentation Generator');
+        const outputChannel = vscode.window.createOutputChannel(
+          'Documentation Generator'
+        );
         outputChannel.appendLine(`Error: ${error.message}`);
         outputChannel.appendLine(`Stack: ${error.stack}`);
         outputChannel.appendLine(`Context: ${context || 'Unknown'}`);
@@ -238,7 +275,11 @@ export class DialogHelper {
         outputChannel.show();
         break;
       case 'Report Issue':
-        vscode.env.openExternal(vscode.Uri.parse('https://github.com/your-repo/documentation-generator/issues/new'));
+        vscode.env.openExternal(
+          vscode.Uri.parse(
+            'https://github.com/your-repo/documentation-generator/issues/new'
+          )
+        );
         break;
     }
   }
@@ -252,12 +293,18 @@ export class DialogHelper {
       actions.unshift('Open File', 'Open Folder');
     }
 
-    const action = await vscode.window.showInformationMessage(message, ...actions);
+    const action = await vscode.window.showInformationMessage(
+      message,
+      ...actions
+    );
 
     if (action === 'Open File' && filePath) {
       vscode.commands.executeCommand('vscode.open', vscode.Uri.file(filePath));
     } else if (action === 'Open Folder' && filePath) {
-      vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(path.dirname(filePath)));
+      vscode.commands.executeCommand(
+        'vscode.openFolder',
+        vscode.Uri.file(path.dirname(filePath))
+      );
     }
   }
 }

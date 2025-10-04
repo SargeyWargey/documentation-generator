@@ -64,7 +64,9 @@ export class TemplateHelpSystem {
    */
   getAllTemplateHelp(): TemplateHelp[] {
     const templates = this.templateManager.getTemplates();
-    return templates.map(template => this.getTemplateHelp(template.id)).filter(Boolean) as TemplateHelp[];
+    return templates
+      .map((template) => this.getTemplateHelp(template.id))
+      .filter(Boolean) as TemplateHelp[];
   }
 
   /**
@@ -74,15 +76,19 @@ export class TemplateHelpSystem {
     const allHelp = this.getAllTemplateHelp();
     const lowercaseQuery = query.toLowerCase();
 
-    return allHelp.filter(help =>
-      help.name.toLowerCase().includes(lowercaseQuery) ||
-      help.description.toLowerCase().includes(lowercaseQuery) ||
-      help.usage.toLowerCase().includes(lowercaseQuery) ||
-      help.bestPractices.some(practice => practice.toLowerCase().includes(lowercaseQuery)) ||
-      help.troubleshooting.some(item =>
-        item.issue.toLowerCase().includes(lowercaseQuery) ||
-        item.solution.toLowerCase().includes(lowercaseQuery)
-      )
+    return allHelp.filter(
+      (help) =>
+        help.name.toLowerCase().includes(lowercaseQuery) ||
+        help.description.toLowerCase().includes(lowercaseQuery) ||
+        help.usage.toLowerCase().includes(lowercaseQuery) ||
+        help.bestPractices.some((practice) =>
+          practice.toLowerCase().includes(lowercaseQuery)
+        ) ||
+        help.troubleshooting.some(
+          (item) =>
+            item.issue.toLowerCase().includes(lowercaseQuery) ||
+            item.solution.toLowerCase().includes(lowercaseQuery)
+        )
     );
   }
 
@@ -92,7 +98,9 @@ export class TemplateHelpSystem {
   async showTemplateHelp(templateId: string): Promise<void> {
     const help = this.getTemplateHelp(templateId);
     if (!help) {
-      vscode.window.showErrorMessage(`Help not available for template: ${templateId}`);
+      vscode.window.showErrorMessage(
+        `Help not available for template: ${templateId}`
+      );
       return;
     }
 
@@ -102,7 +110,7 @@ export class TemplateHelpSystem {
       vscode.ViewColumn.Beside,
       {
         enableScripts: true,
-        retainContextWhenHidden: true
+        retainContextWhenHidden: true,
       }
     );
 
@@ -119,7 +127,7 @@ export class TemplateHelpSystem {
       vscode.ViewColumn.One,
       {
         enableScripts: true,
-        retainContextWhenHidden: true
+        retainContextWhenHidden: true,
       }
     );
 
@@ -129,14 +137,17 @@ export class TemplateHelpSystem {
   /**
    * Validate template usage and provide suggestions
    */
-  validateTemplateUsage(templateId: string, variables: Record<string, any>): ValidationResult {
+  validateTemplateUsage(
+    templateId: string,
+    variables: Record<string, any>
+  ): ValidationResult {
     const template = this.templateManager.getTemplate(templateId);
     if (!template) {
       return {
         isValid: false,
         errors: [`Template '${templateId}' not found`],
         warnings: [],
-        suggestions: []
+        suggestions: [],
       };
     }
 
@@ -144,7 +155,7 @@ export class TemplateHelpSystem {
       isValid: true,
       errors: [],
       warnings: [],
-      suggestions: []
+      suggestions: [],
     };
 
     // Validate required variables
@@ -166,7 +177,9 @@ export class TemplateHelpSystem {
 
         // Provide suggestions for missing variables
         if (!(variable.name in variables) && variable.default !== undefined) {
-          result.suggestions.push(`Consider using default value for '${variable.name}': ${variable.default}`);
+          result.suggestions.push(
+            `Consider using default value for '${variable.name}': ${variable.default}`
+          );
         }
       }
     }
@@ -183,7 +196,7 @@ export class TemplateHelpSystem {
       examples: this.generateExamples(template),
       variables: this.generateVariableHelp(template.metadata.variables || []),
       bestPractices: this.generateBestPractices(template),
-      troubleshooting: this.generateTroubleshooting(template)
+      troubleshooting: this.generateTroubleshooting(template),
     };
   }
 
@@ -195,14 +208,16 @@ export class TemplateHelpSystem {
 
     if (variables.length > 0) {
       usage += 'Required variables:\n';
-      variables.filter(v => v.required).forEach(v => {
-        usage += `- ${v.name}: ${v.description}\n`;
-      });
+      variables
+        .filter((v) => v.required)
+        .forEach((v) => {
+          usage += `- ${v.name}: ${v.description}\n`;
+        });
 
-      const optionalVars = variables.filter(v => !v.required);
+      const optionalVars = variables.filter((v) => !v.required);
       if (optionalVars.length > 0) {
         usage += '\nOptional variables:\n';
-        optionalVars.forEach(v => {
+        optionalVars.forEach((v) => {
           usage += `- ${v.name}: ${v.description}`;
           if (v.default !== undefined) {
             usage += ` (default: ${v.default})`;
@@ -232,14 +247,16 @@ export class TemplateHelpSystem {
       title: 'Basic Usage',
       description: 'Minimum required variables for this template',
       variables: basicVariables,
-      expectedOutput: 'Preview of generated content...'
+      expectedOutput: 'Preview of generated content...',
     });
 
     // Generate advanced example if there are optional variables
-    const optionalVars = template.metadata.variables?.filter(v => !v.required);
+    const optionalVars = template.metadata.variables?.filter(
+      (v) => !v.required
+    );
     if (optionalVars && optionalVars.length > 0) {
       const advancedVariables = { ...basicVariables };
-      optionalVars.forEach(variable => {
+      optionalVars.forEach((variable) => {
         advancedVariables[variable.name] = this.getExampleValue(variable);
       });
 
@@ -247,22 +264,24 @@ export class TemplateHelpSystem {
         title: 'Advanced Usage',
         description: 'Using all available variables',
         variables: advancedVariables,
-        expectedOutput: 'Preview with all options...'
+        expectedOutput: 'Preview with all options...',
       });
     }
 
     return examples;
   }
 
-  private generateVariableHelp(variables: TemplateVariable[]): TemplateVariableHelp[] {
-    return variables.map(variable => ({
+  private generateVariableHelp(
+    variables: TemplateVariable[]
+  ): TemplateVariableHelp[] {
+    return variables.map((variable) => ({
       name: variable.name,
       description: variable.description,
       type: variable.type,
       required: variable.required || false,
       default: variable.default,
       examples: this.getVariableExamples(variable),
-      validation: this.getVariableValidation(variable)
+      validation: this.getVariableValidation(variable),
     }));
   }
 
@@ -271,7 +290,7 @@ export class TemplateHelpSystem {
       'Always provide meaningful values for required variables',
       'Use descriptive names and clear language in your documentation',
       'Review the generated output before finalizing',
-      'Keep variable values concise but informative'
+      'Keep variable values concise but informative',
     ];
 
     // Add template-specific practices based on category
@@ -299,18 +318,21 @@ export class TemplateHelpSystem {
       {
         issue: 'Template variables not being replaced',
         cause: 'Variable names might be misspelled or missing from input',
-        solution: 'Check variable names match exactly (case-sensitive) and all required variables are provided'
+        solution:
+          'Check variable names match exactly (case-sensitive) and all required variables are provided',
       },
       {
         issue: 'Generated content looks incomplete',
         cause: 'Some optional variables might enhance the output',
-        solution: 'Review the template variables and consider providing values for optional parameters'
+        solution:
+          'Review the template variables and consider providing values for optional parameters',
       },
       {
         issue: 'Template fails to process',
         cause: 'Invalid variable types or missing required fields',
-        solution: 'Validate all inputs using the template help system before processing'
-      }
+        solution:
+          'Validate all inputs using the template help system before processing',
+      },
     ];
   }
 
@@ -345,7 +367,9 @@ export class TemplateHelpSystem {
           examples.push('"User Authentication System"');
         }
         if (variable.name.toLowerCase().includes('description')) {
-          examples.push('"A comprehensive guide to implementing user authentication"');
+          examples.push(
+            '"A comprehensive guide to implementing user authentication"'
+          );
         }
         break;
       case 'number':
@@ -359,7 +383,7 @@ export class TemplateHelpSystem {
         break;
       case 'select':
         if (variable.options) {
-          examples.push(...variable.options.map(opt => `"${opt}"`));
+          examples.push(...variable.options.map((opt) => `"${opt}"`));
         }
         break;
     }
@@ -378,37 +402,57 @@ export class TemplateHelpSystem {
       case 'date':
         return 'Must be in YYYY-MM-DD format';
       case 'select':
-        return variable.options ? `Must be one of: ${variable.options.join(', ')}` : 'Must be a valid option';
+        return variable.options
+          ? `Must be one of: ${variable.options.join(', ')}`
+          : 'Must be a valid option';
       default:
         return 'Follow the specified format';
     }
   }
 
-  private validateVariableType(variable: TemplateVariable, value: any): { isValid: boolean; message: string } {
+  private validateVariableType(
+    variable: TemplateVariable,
+    value: any
+  ): { isValid: boolean; message: string } {
     switch (variable.type) {
       case 'string':
         if (typeof value !== 'string') {
-          return { isValid: false, message: `Variable '${variable.name}' should be a string` };
+          return {
+            isValid: false,
+            message: `Variable '${variable.name}' should be a string`,
+          };
         }
         break;
       case 'number':
         if (typeof value !== 'number' && isNaN(Number(value))) {
-          return { isValid: false, message: `Variable '${variable.name}' should be a number` };
+          return {
+            isValid: false,
+            message: `Variable '${variable.name}' should be a number`,
+          };
         }
         break;
       case 'boolean':
         if (typeof value !== 'boolean') {
-          return { isValid: false, message: `Variable '${variable.name}' should be a boolean` };
+          return {
+            isValid: false,
+            message: `Variable '${variable.name}' should be a boolean`,
+          };
         }
         break;
       case 'date':
         if (typeof value === 'string' && !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-          return { isValid: false, message: `Variable '${variable.name}' should be in YYYY-MM-DD format` };
+          return {
+            isValid: false,
+            message: `Variable '${variable.name}' should be in YYYY-MM-DD format`,
+          };
         }
         break;
       case 'select':
         if (variable.options && !variable.options.includes(value)) {
-          return { isValid: false, message: `Variable '${variable.name}' must be one of: ${variable.options.join(', ')}` };
+          return {
+            isValid: false,
+            message: `Variable '${variable.name}' must be one of: ${variable.options.join(', ')}`,
+          };
         }
         break;
     }
@@ -471,7 +515,9 @@ export class TemplateHelpSystem {
 
         <div class="section">
             <h2>Variables</h2>
-            ${help.variables.map(variable => `
+            ${help.variables
+              .map(
+                (variable) => `
                 <div class="variable">
                     <h3>${variable.name} ${variable.required ? '(Required)' : '(Optional)'}</h3>
                     <p><strong>Type:</strong> ${variable.type}</p>
@@ -480,37 +526,47 @@ export class TemplateHelpSystem {
                     <p><strong>Examples:</strong> ${variable.examples.join(', ')}</p>
                     ${variable.validation ? `<p><strong>Validation:</strong> ${variable.validation}</p>` : ''}
                 </div>
-            `).join('')}
+            `
+              )
+              .join('')}
         </div>
 
         <div class="section">
             <h2>Examples</h2>
-            ${help.examples.map(example => `
+            ${help.examples
+              .map(
+                (example) => `
                 <div class="example">
                     <h3>${example.title}</h3>
                     <p>${example.description}</p>
                     <h4>Variables:</h4>
                     <pre class="code">${JSON.stringify(example.variables, null, 2)}</pre>
                 </div>
-            `).join('')}
+            `
+              )
+              .join('')}
         </div>
 
         <div class="section">
             <h2>Best Practices</h2>
             <ul>
-                ${help.bestPractices.map(practice => `<li>${practice}</li>`).join('')}
+                ${help.bestPractices.map((practice) => `<li>${practice}</li>`).join('')}
             </ul>
         </div>
 
         <div class="section">
             <h2>Troubleshooting</h2>
-            ${help.troubleshooting.map(item => `
+            ${help.troubleshooting
+              .map(
+                (item) => `
                 <div class="troubleshooting-item">
                     <h4>Issue: ${item.issue}</h4>
                     <p><strong>Cause:</strong> ${item.cause}</p>
                     <p><strong>Solution:</strong> ${item.solution}</p>
                 </div>
-            `).join('')}
+            `
+              )
+              .join('')}
         </div>
     </body>
     </html>

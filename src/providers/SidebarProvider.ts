@@ -11,8 +11,12 @@ export interface TreeItem {
 }
 
 export class SidebarProvider implements vscode.TreeDataProvider<TreeItem> {
-  private _onDidChangeTreeData: vscode.EventEmitter<TreeItem | undefined | null | void> = new vscode.EventEmitter<TreeItem | undefined | null | void>();
-  readonly onDidChangeTreeData: vscode.Event<TreeItem | undefined | null | void> = this._onDidChangeTreeData.event;
+  private _onDidChangeTreeData: vscode.EventEmitter<
+    TreeItem | undefined | null | void
+  > = new vscode.EventEmitter<TreeItem | undefined | null | void>();
+  readonly onDidChangeTreeData: vscode.Event<
+    TreeItem | undefined | null | void
+  > = this._onDidChangeTreeData.event;
 
   private treeData: TreeItem[] = [];
 
@@ -35,8 +39,8 @@ export class SidebarProvider implements vscode.TreeDataProvider<TreeItem> {
             iconPath: new vscode.ThemeIcon('file-text'),
             command: {
               command: 'documentation-generator.generateDocs',
-              title: 'Generate Documentation'
-            }
+              title: 'Generate Documentation',
+            },
           },
           {
             label: 'Select Folder',
@@ -45,8 +49,8 @@ export class SidebarProvider implements vscode.TreeDataProvider<TreeItem> {
             iconPath: new vscode.ThemeIcon('folder-opened'),
             command: {
               command: 'documentation-generator.selectFolder',
-              title: 'Select Folder'
-            }
+              title: 'Select Folder',
+            },
           },
           {
             label: 'Choose Template',
@@ -55,10 +59,10 @@ export class SidebarProvider implements vscode.TreeDataProvider<TreeItem> {
             iconPath: new vscode.ThemeIcon('list-selection'),
             command: {
               command: 'documentation-generator.selectTemplate',
-              title: 'Choose Template'
-            }
-          }
-        ]
+              title: 'Choose Template',
+            },
+          },
+        ],
       },
       {
         label: 'Templates',
@@ -74,8 +78,8 @@ export class SidebarProvider implements vscode.TreeDataProvider<TreeItem> {
             command: {
               command: 'documentation-generator.useTemplate',
               title: 'Use Template',
-              arguments: ['help']
-            }
+              arguments: ['help'],
+            },
           },
           {
             label: 'PRD Template',
@@ -85,8 +89,8 @@ export class SidebarProvider implements vscode.TreeDataProvider<TreeItem> {
             command: {
               command: 'documentation-generator.useTemplate',
               title: 'Use Template',
-              arguments: ['prd']
-            }
+              arguments: ['prd'],
+            },
           },
           {
             label: 'Technical Specification',
@@ -96,8 +100,8 @@ export class SidebarProvider implements vscode.TreeDataProvider<TreeItem> {
             command: {
               command: 'documentation-generator.useTemplate',
               title: 'Use Template',
-              arguments: ['technical']
-            }
+              arguments: ['technical'],
+            },
           },
           {
             label: 'Meeting Summary',
@@ -107,10 +111,10 @@ export class SidebarProvider implements vscode.TreeDataProvider<TreeItem> {
             command: {
               command: 'documentation-generator.useTemplate',
               title: 'Use Template',
-              arguments: ['meeting']
-            }
-          }
-        ]
+              arguments: ['meeting'],
+            },
+          },
+        ],
       },
       {
         label: 'Recent Generations',
@@ -121,9 +125,9 @@ export class SidebarProvider implements vscode.TreeDataProvider<TreeItem> {
           {
             label: 'No recent generations',
             id: 'no-recent',
-            iconPath: new vscode.ThemeIcon('circle-slash')
-          }
-        ]
+            iconPath: new vscode.ThemeIcon('circle-slash'),
+          },
+        ],
       },
       {
         label: 'Settings',
@@ -138,8 +142,8 @@ export class SidebarProvider implements vscode.TreeDataProvider<TreeItem> {
             iconPath: new vscode.ThemeIcon('wrench'),
             command: {
               command: 'documentation-generator.openSettings',
-              title: 'Open Settings'
-            }
+              title: 'Open Settings',
+            },
           },
           {
             label: 'Template Management',
@@ -148,8 +152,8 @@ export class SidebarProvider implements vscode.TreeDataProvider<TreeItem> {
             iconPath: new vscode.ThemeIcon('book'),
             command: {
               command: 'documentation-generator.manageTemplates',
-              title: 'Manage Templates'
-            }
+              title: 'Manage Templates',
+            },
           },
           {
             label: 'Help & Documentation',
@@ -158,16 +162,19 @@ export class SidebarProvider implements vscode.TreeDataProvider<TreeItem> {
             iconPath: new vscode.ThemeIcon('info'),
             command: {
               command: 'documentation-generator.showHelp',
-              title: 'Show Help'
-            }
-          }
-        ]
-      }
+              title: 'Show Help',
+            },
+          },
+        ],
+      },
     ];
   }
 
   getTreeItem(element: TreeItem): vscode.TreeItem {
-    const treeItem = new vscode.TreeItem(element.label, element.collapsibleState);
+    const treeItem = new vscode.TreeItem(
+      element.label,
+      element.collapsibleState
+    );
     treeItem.id = element.id;
     treeItem.contextValue = element.contextValue;
     treeItem.iconPath = element.iconPath;
@@ -188,9 +195,12 @@ export class SidebarProvider implements vscode.TreeDataProvider<TreeItem> {
   }
 
   addRecentGeneration(name: string, path: string, _template: string): void {
-    const recentSection = this.treeData.find(item => item.id === 'recent');
+    const recentSection = this.treeData.find((item) => item.id === 'recent');
     if (recentSection) {
-      if (recentSection.children && recentSection.children[0]?.id === 'no-recent') {
+      if (
+        recentSection.children &&
+        recentSection.children[0]?.id === 'no-recent'
+      ) {
         recentSection.children = [];
       }
       if (!recentSection.children) {
@@ -205,8 +215,8 @@ export class SidebarProvider implements vscode.TreeDataProvider<TreeItem> {
         command: {
           command: 'vscode.open',
           title: 'Open File',
-          arguments: [vscode.Uri.file(path)]
-        }
+          arguments: [vscode.Uri.file(path)],
+        },
       };
 
       recentSection.children.unshift(newItem);
@@ -221,9 +231,11 @@ export class SidebarProvider implements vscode.TreeDataProvider<TreeItem> {
   }
 
   updateTemplates(templates: string[]): void {
-    const templateSection = this.treeData.find(item => item.id === 'templates');
+    const templateSection = this.treeData.find(
+      (item) => item.id === 'templates'
+    );
     if (templateSection) {
-      templateSection.children = templates.map(template => ({
+      templateSection.children = templates.map((template) => ({
         label: template,
         id: `template-${template}`,
         contextValue: 'template',
@@ -231,8 +243,8 @@ export class SidebarProvider implements vscode.TreeDataProvider<TreeItem> {
         command: {
           command: 'documentation-generator.useTemplate',
           title: 'Use Template',
-          arguments: [template]
-        }
+          arguments: [template],
+        },
       }));
       this._onDidChangeTreeData.fire();
     }

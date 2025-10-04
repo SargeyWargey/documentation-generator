@@ -12,7 +12,8 @@ import { FolderContext } from '../utils/FolderAnalyzer';
 import { Template, TemplateVariable } from '../templates/TemplateManager';
 
 export class SlashCommandGenerator {
-  private readonly commandTemplates: Map<string, CommandTemplateDefinition> = new Map();
+  private readonly commandTemplates: Map<string, CommandTemplateDefinition> =
+    new Map();
   private readonly templateVersions: Map<string, number> = new Map();
 
   constructor() {
@@ -42,7 +43,11 @@ export class SlashCommandGenerator {
       versionNumber,
       options
     );
-    const fileName = this.buildFileName(context.template, versionNumber, options);
+    const fileName = this.buildFileName(
+      context.template,
+      versionNumber,
+      options
+    );
 
     const commandSections = [
       this.buildFrontmatter(metadata),
@@ -75,7 +80,9 @@ export class SlashCommandGenerator {
     context: ClaudeCommandContext
   ): CommandTemplateDefinition {
     if (context.commandTemplateId) {
-      const explicitTemplate = this.commandTemplates.get(context.commandTemplateId);
+      const explicitTemplate = this.commandTemplates.get(
+        context.commandTemplateId
+      );
       if (explicitTemplate) {
         return explicitTemplate;
       }
@@ -180,7 +187,9 @@ export class SlashCommandGenerator {
     return args;
   }
 
-  private mapVariableType(variable: TemplateVariable): CommandArgumentDefinition['type'] {
+  private mapVariableType(
+    variable: TemplateVariable
+  ): CommandArgumentDefinition['type'] {
     switch (variable.type) {
       case 'number':
         return 'number';

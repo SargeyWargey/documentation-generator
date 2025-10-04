@@ -47,7 +47,8 @@ export class TemplateManager {
     );
 
     // Create global storage URI if it doesn't exist
-    const globalStoragePath = extensionContext.globalStorageUri?.fsPath ||
+    const globalStoragePath =
+      extensionContext.globalStorageUri?.fsPath ||
       path.join(extensionContext.extensionPath, '.storage', 'global');
 
     this.userTemplatesPath = path.join(globalStoragePath, 'templates');
@@ -132,15 +133,44 @@ export class TemplateManager {
   async installTemplate(
     filePath: string,
     targetDirectory?: string
-  ): Promise<void> {
+  ): Promise<Template> {
     const templateContent = await fs.readFile(filePath, 'utf-8');
-    const template = await this.parseTemplate(templateContent, filePath);
+
+    let parsedTemplate: Template;
+    let contentToPersist = templateContent;
+
+    try {
+      parsedTemplate = await this.parseTemplate(templateContent, filePath);
+    } catch (error) {
+      console.warn(
+        'TemplateManager: Unable to parse template frontmatter. Generating default metadata.',
+        error
+      );
+      parsedTemplate = this.createTemplateFromBareMarkdown(
+        path.basename(filePath, path.extname(filePath)),
+        templateContent
+      );
+      contentToPersist = this.serializeTemplate(parsedTemplate);
+    }
 
     const targetPath = targetDirectory || this.userTemplatesPath;
-    const targetFile = path.join(targetPath, `${template.id}.md`);
+    const uniqueId = this.generateUniqueTemplateId(parsedTemplate.id);
+    const targetFile = path.join(targetPath, `${uniqueId}.md`);
 
-    await fs.writeFile(targetFile, templateContent);
-    this.templates.set(template.id, { ...template, filePath: targetFile });
+    const templateToSave: Template = {
+      ...parsedTemplate,
+      id: uniqueId,
+      filePath: targetFile,
+    };
+
+    const finalContent =
+      contentToPersist.trim().startsWith('---') && parsedTemplate.id === uniqueId
+        ? contentToPersist
+        : this.serializeTemplate(templateToSave);
+
+    await fs.writeFile(targetFile, finalContent);
+    this.templates.set(uniqueId, templateToSave);
+    return templateToSave;
   }
 
   /**
@@ -168,7 +198,6 @@ export class TemplateManager {
     return new Map(this.templates);
   }
 
-
   /**
    * Save a template (create or update)
    */
@@ -178,12 +207,23 @@ export class TemplateManager {
 
     await this.ensureDirectoriesExist();
 
-    const templateContent = this.serializeTemplate(template);
-    const fileName = `${template.id}.md`;
+    const isUpdate = this.templates.has(template.id);
+    const candidateId = template.id || template.metadata.name || 'template';
+    const finalId = isUpdate
+      ? template.id
+      : this.generateUniqueTemplateId(candidateId);
+
+    const finalTemplate: Template = {
+      ...template,
+      id: finalId,
+    };
+
+    const templateContent = this.serializeTemplate(finalTemplate);
+    const fileName = `${finalId}.md`;
     const targetFile = path.join(this.userTemplatesPath, fileName);
 
     await fs.writeFile(targetFile, templateContent);
-    this.templates.set(template.id, { ...template, filePath: targetFile });
+    this.templates.set(finalId, { ...finalTemplate, filePath: targetFile });
   }
 
   /**
@@ -210,14 +250,21 @@ export class TemplateManager {
       for (const match of matches) {
         const varName = match.replace(/\{\{|\}\}/g, '');
         if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(varName)) {
-          throw new Error(`Invalid variable name: ${varName}. Variable names must start with a letter or underscore and contain only letters, numbers, and underscores.`);
+          throw new Error(
+            `Invalid variable name: ${varName}. Variable names must start with a letter or underscore and contain only letters, numbers, and underscores.`
+          );
         }
       }
     }
 
     // Validate version format if provided
-    if (template.metadata.version && !/^\d+\.\d+\.\d+$/.test(template.metadata.version)) {
-      throw new Error('Version must be in semantic versioning format (e.g., 1.0.0)');
+    if (
+      template.metadata.version &&
+      !/^\d+\.\d+\.\d+$/.test(template.metadata.version)
+    ) {
+      throw new Error(
+        'Version must be in semantic versioning format (e.g., 1.0.0)'
+      );
     }
   }
 
@@ -274,14 +321,18 @@ ${template.content}`;
 
   private async loadDefaultTemplates(): Promise<void> {
     try {
-      console.log(`TemplateManager: Loading default templates from ${this.defaultTemplatesPath}`);
+      console.log(
+        `TemplateManager: Loading default templates from ${this.defaultTemplatesPath}`
+      );
 
       // Check if directory exists first
       try {
         await fs.access(this.defaultTemplatesPath);
         console.log(`TemplateManager: Default templates directory exists`);
       } catch (error) {
-        console.warn(`TemplateManager: Default templates directory not accessible: ${error}`);
+        console.warn(
+          `TemplateManager: Default templates directory not accessible: ${error}`
+        );
         await this.createDefaultTemplates();
         return;
       }
@@ -289,11 +340,15 @@ ${template.content}`;
       const initialCount = this.templates.size;
       await this.loadTemplatesFromDirectory(this.defaultTemplatesPath);
       const newCount = this.templates.size;
-      console.log(`TemplateManager: Loaded ${newCount - initialCount} templates from default directory (total: ${newCount})`);
+      console.log(
+        `TemplateManager: Loaded ${newCount - initialCount} templates from default directory (total: ${newCount})`
+      );
 
       // If no templates were loaded from the directory, create defaults
       if (newCount === initialCount) {
-        console.log('TemplateManager: No valid templates found in default directory, creating basic templates');
+        console.log(
+          'TemplateManager: No valid templates found in default directory, creating basic templates'
+        );
         await this.createDefaultTemplates();
       }
     } catch (error) {
@@ -314,36 +369,52 @@ ${template.content}`;
 
   private async loadTemplatesFromDirectory(directory: string): Promise<void> {
     try {
-      console.log(`TemplateManager: Scanning directory ${directory} for templates`);
+      console.log(
+        `TemplateManager: Scanning directory ${directory} for templates`
+      );
       const files = await fs.readdir(directory);
-      console.log(`TemplateManager: Found ${files.length} files in directory: ${files.join(', ')}`);
-
-      const templateFiles = files.filter((file) =>
-        file.endsWith('.md') &&
-        !file.toLowerCase().startsWith('readme') &&
-        !file.toLowerCase().startsWith('license') &&
-        !file.toLowerCase().startsWith('changelog')
+      console.log(
+        `TemplateManager: Found ${files.length} files in directory: ${files.join(', ')}`
       );
 
-      console.log(`TemplateManager: Found ${templateFiles.length} potential template files: ${templateFiles.join(', ')}`);
+      const templateFiles = files.filter(
+        (file) =>
+          file.endsWith('.md') &&
+          !file.toLowerCase().startsWith('readme') &&
+          !file.toLowerCase().startsWith('license') &&
+          !file.toLowerCase().startsWith('changelog')
+      );
+
+      console.log(
+        `TemplateManager: Found ${templateFiles.length} potential template files: ${templateFiles.join(', ')}`
+      );
 
       for (const file of templateFiles) {
         const filePath = path.join(directory, file);
         try {
-          console.log(`TemplateManager: Attempting to load template from ${filePath}`);
+          console.log(
+            `TemplateManager: Attempting to load template from ${filePath}`
+          );
           const content = await fs.readFile(filePath, 'utf-8');
 
           // Check if file has frontmatter before parsing
           if (!content.trim().startsWith('---')) {
-            console.log(`TemplateManager: Skipping ${file} - not a template file (no frontmatter)`);
+            console.log(
+              `TemplateManager: Skipping ${file} - not a template file (no frontmatter)`
+            );
             continue;
           }
 
           const template = await this.parseTemplate(content, filePath);
           this.templates.set(template.id, template);
-          console.log(`TemplateManager: Successfully loaded template "${template.metadata.name}" with ID "${template.id}"`);
+          console.log(
+            `TemplateManager: Successfully loaded template "${template.metadata.name}" with ID "${template.id}"`
+          );
         } catch (error) {
-          console.warn(`TemplateManager: Failed to load template from ${filePath}:`, error);
+          console.warn(
+            `TemplateManager: Failed to load template from ${filePath}:`,
+            error
+          );
         }
       }
     } catch (error) {
@@ -399,6 +470,65 @@ ${template.content}`;
     return metadata as TemplateMetadata;
   }
 
+  public generateUniqueTemplateId(baseName: string): string {
+    const sanitizedBase = this.sanitizeTemplateId(baseName);
+
+    if (!this.templates.has(sanitizedBase)) {
+      return sanitizedBase;
+    }
+
+    let counter = 1;
+    let candidate = `${sanitizedBase}-${counter}`;
+    while (this.templates.has(candidate)) {
+      counter += 1;
+      candidate = `${sanitizedBase}-${counter}`;
+    }
+
+    return candidate;
+  }
+
+  private sanitizeTemplateId(value: string): string {
+    const normalized = value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+    return normalized || `template-${Date.now()}`;
+  }
+
+  private toTitleCase(value: string): string {
+    return value
+      .split(/\s+|-/)
+      .filter((part) => part.length > 0)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
+  }
+
+  private createTemplateFromBareMarkdown(
+    baseName: string,
+    fileContent: string
+  ): Template {
+    const firstHeadingMatch = fileContent.match(/^#\s+(.+)$/m);
+    const inferredName = firstHeadingMatch
+      ? firstHeadingMatch[1].trim()
+      : this.toTitleCase(baseName);
+
+    const metadata: TemplateMetadata = {
+      name: inferredName,
+      description: `Imported template from ${inferredName}`,
+      author: 'Imported',
+      version: '1.0.0',
+      category: 'imported',
+      tags: ['imported'],
+    };
+
+    return {
+      id: baseName,
+      metadata,
+      content: fileContent,
+      filePath: '',
+    };
+  }
+
   private validateRequiredVariables(
     template: Template,
     variables: Record<string, any>
@@ -428,8 +558,10 @@ ${template.content}`;
       currentDate: now.toLocaleDateString(),
       currentDateTime: now.toLocaleString(),
       currentYear: now.getFullYear().toString(),
-      nextReviewDate: new Date(now.setMonth(now.getMonth() + 3)).toLocaleDateString(),
-      ...variables
+      nextReviewDate: new Date(
+        now.setMonth(now.getMonth() + 3)
+      ).toLocaleDateString(),
+      ...variables,
     };
 
     // Process array iterations {{#arrayName}}...{{/arrayName}}
@@ -506,7 +638,8 @@ ${template.content}`;
     let result = content;
 
     // Match {{#if condition}}...{{/if}} patterns with optional {{else}}
-    const conditionalPattern = /{{#if\s+(\w+)}}([\s\S]*?)(?:{{else}}([\s\S]*?))?{{\/if}}/g;
+    const conditionalPattern =
+      /{{#if\s+(\w+)}}([\s\S]*?)(?:{{else}}([\s\S]*?))?{{\/if}}/g;
     let match;
 
     while ((match = conditionalPattern.exec(content)) !== null) {
@@ -574,7 +707,10 @@ ${template.content}`;
     }
 
     // Try to load from file if not in cache
-    const templatePath = path.join(this.defaultTemplatesPath, `${templateType}.md`);
+    const templatePath = path.join(
+      this.defaultTemplatesPath,
+      `${templateType}.md`
+    );
     try {
       const content = await fs.readFile(templatePath, 'utf-8');
       const parsedTemplate = await this.parseTemplate(content, templatePath);
@@ -621,7 +757,10 @@ ${template.content}`;
         if (!variable.type) {
           errors.push(`Variable type is required for ${variable.name}`);
         }
-        if (variable.type === 'select' && (!variable.options || variable.options.length === 0)) {
+        if (
+          variable.type === 'select' &&
+          (!variable.options || variable.options.length === 0)
+        ) {
           errors.push(`Select variable ${variable.name} must have options`);
         }
       }
@@ -629,7 +768,7 @@ ${template.content}`;
 
     return {
       isValid: errors.length === 0,
-      errors
+      errors,
     };
   }
 

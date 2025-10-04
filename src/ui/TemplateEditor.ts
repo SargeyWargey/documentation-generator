@@ -1,6 +1,14 @@
 import * as vscode from 'vscode';
-import { TemplateManager, Template, TemplateMetadata, TemplateVariable } from '../templates/TemplateManager';
-import { TemplateValidator, ValidationResult } from '../templates/TemplateValidator';
+import {
+  TemplateManager,
+  Template,
+  TemplateMetadata,
+  TemplateVariable,
+} from '../templates/TemplateManager';
+import {
+  TemplateValidator,
+  ValidationResult,
+} from '../templates/TemplateValidator';
 
 export interface TemplateEditorOptions {
   template?: Template;
@@ -26,12 +34,14 @@ export class TemplateEditor {
     // Create webview panel
     this.panel = vscode.window.createWebviewPanel(
       'templateEditor',
-      mode === 'create' ? 'Create Template' : `Edit Template: ${template?.metadata.name}`,
+      mode === 'create'
+        ? 'Create Template'
+        : `Edit Template: ${template?.metadata.name}`,
       vscode.ViewColumn.One,
       {
         enableScripts: true,
         retainContextWhenHidden: true,
-        localResourceRoots: []
+        localResourceRoots: [],
       }
     );
 
@@ -89,14 +99,14 @@ export class TemplateEditor {
         id: templateData.id || 'temp',
         metadata: templateData.metadata,
         content: templateData.content,
-        filePath: ''
+        filePath: '',
       };
 
       const validation = this.validator.validateTemplate(template);
 
       this.panel?.webview.postMessage({
         command: 'validationResult',
-        data: validation
+        data: validation,
       });
     } catch (error) {
       this.panel?.webview.postMessage({
@@ -104,8 +114,8 @@ export class TemplateEditor {
         data: {
           isValid: false,
           errors: [`Validation error: ${error}`],
-          warnings: []
-        }
+          warnings: [],
+        },
       });
     }
   }
@@ -120,13 +130,15 @@ export class TemplateEditor {
         id: templateData.id || `template-${Date.now()}`,
         metadata: templateData.metadata,
         content: templateData.content,
-        filePath: ''
+        filePath: '',
       };
 
       const validation = this.validator.validateTemplate(template);
 
       if (!validation.isValid) {
-        vscode.window.showErrorMessage(`Template validation failed: ${validation.errors.join(', ')}`);
+        vscode.window.showErrorMessage(
+          `Template validation failed: ${validation.errors.join(', ')}`
+        );
         return;
       }
 
@@ -136,25 +148,29 @@ export class TemplateEditor {
 
       // Save template using TemplateManager
       const tempFilePath = vscode.Uri.file(`${template.id}.md`);
-      await vscode.workspace.fs.writeFile(tempFilePath, Buffer.from(fullContent));
+      await vscode.workspace.fs.writeFile(
+        tempFilePath,
+        Buffer.from(fullContent)
+      );
 
       await this.templateManager.installTemplate(tempFilePath.fsPath);
 
       // Clean up temp file
       await vscode.workspace.fs.delete(tempFilePath);
 
-      vscode.window.showInformationMessage(`Template '${template.metadata.name}' saved successfully!`);
+      vscode.window.showInformationMessage(
+        `Template '${template.metadata.name}' saved successfully!`
+      );
 
       this.panel?.webview.postMessage({
         command: 'templateSaved',
-        data: { success: true }
+        data: { success: true },
       });
-
     } catch (error) {
       vscode.window.showErrorMessage(`Failed to save template: ${error}`);
       this.panel?.webview.postMessage({
         command: 'templateSaved',
-        data: { success: false, error: String(error) }
+        data: { success: false, error: String(error) },
       });
     }
   }
@@ -171,36 +187,42 @@ export class TemplateEditor {
         for (const variable of templateData.metadata.variables) {
           switch (variable.type) {
             case 'string':
-              sampleVariables[variable.name] = variable.default || `Sample ${variable.name}`;
+              sampleVariables[variable.name] =
+                variable.default || `Sample ${variable.name}`;
               break;
             case 'number':
               sampleVariables[variable.name] = variable.default || 42;
               break;
             case 'boolean':
-              sampleVariables[variable.name] = variable.default !== undefined ? variable.default : true;
+              sampleVariables[variable.name] =
+                variable.default !== undefined ? variable.default : true;
               break;
             case 'date':
-              sampleVariables[variable.name] = variable.default || new Date().toISOString().split('T')[0];
+              sampleVariables[variable.name] =
+                variable.default || new Date().toISOString().split('T')[0];
               break;
             case 'select':
-              sampleVariables[variable.name] = variable.default || variable.options?.[0] || 'Option 1';
+              sampleVariables[variable.name] =
+                variable.default || variable.options?.[0] || 'Option 1';
               break;
           }
         }
       }
 
       // Process template with sample variables
-      const processedContent = this.processTemplateContent(templateData.content, sampleVariables);
+      const processedContent = this.processTemplateContent(
+        templateData.content,
+        sampleVariables
+      );
 
       this.panel?.webview.postMessage({
         command: 'previewResult',
-        data: { content: processedContent }
+        data: { content: processedContent },
       });
-
     } catch (error) {
       this.panel?.webview.postMessage({
         command: 'previewResult',
-        data: { error: String(error) }
+        data: { error: String(error) },
       });
     }
   }
@@ -213,12 +235,12 @@ export class TemplateEditor {
       name: '',
       description: '',
       type: 'string',
-      required: false
+      required: false,
     };
 
     this.panel?.webview.postMessage({
       command: 'variableAdded',
-      data: newVariable
+      data: newVariable,
     });
   }
 
@@ -228,7 +250,7 @@ export class TemplateEditor {
   private async handleRemoveVariable(index: number): Promise<void> {
     this.panel?.webview.postMessage({
       command: 'variableRemoved',
-      data: { index }
+      data: { index },
     });
   }
 
@@ -244,13 +266,15 @@ export class TemplateEditor {
         defaultUri: vscode.Uri.file(`${templateData.metadata.name}.md`),
         filters: {
           'Markdown Files': ['md'],
-          'All Files': ['*']
-        }
+          'All Files': ['*'],
+        },
       });
 
       if (uri) {
         await vscode.workspace.fs.writeFile(uri, Buffer.from(fullContent));
-        vscode.window.showInformationMessage(`Template exported to ${uri.fsPath}`);
+        vscode.window.showInformationMessage(
+          `Template exported to ${uri.fsPath}`
+        );
       }
     } catch (error) {
       vscode.window.showErrorMessage(`Failed to export template: ${error}`);
@@ -268,8 +292,8 @@ export class TemplateEditor {
         canSelectMany: false,
         filters: {
           'Markdown Files': ['md'],
-          'All Files': ['*']
-        }
+          'All Files': ['*'],
+        },
       });
 
       if (uri && uri[0]) {
@@ -277,7 +301,9 @@ export class TemplateEditor {
         const contentStr = Buffer.from(content).toString('utf8');
 
         // Parse the template content
-        const frontmatterMatch = contentStr.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+        const frontmatterMatch = contentStr.match(
+          /^---\n([\s\S]*?)\n---\n([\s\S]*)$/
+        );
 
         if (frontmatterMatch) {
           const [, frontmatter, templateContent] = frontmatterMatch;
@@ -287,8 +313,8 @@ export class TemplateEditor {
             command: 'templateImported',
             data: {
               metadata,
-              content: templateContent
-            }
+              content: templateContent,
+            },
           });
         } else {
           vscode.window.showErrorMessage('Invalid template file format');
@@ -303,21 +329,23 @@ export class TemplateEditor {
    * Generate webview HTML content
    */
   private generateWebviewContent(template?: Template): string {
-    const templateData = template ? {
-      id: template.id,
-      metadata: template.metadata,
-      content: template.content
-    } : {
-      id: '',
-      metadata: {
-        name: '',
-        description: '',
-        category: '',
-        version: '1.0.0',
-        variables: []
-      },
-      content: ''
-    };
+    const templateData = template
+      ? {
+          id: template.id,
+          metadata: template.metadata,
+          content: template.content,
+        }
+      : {
+          id: '',
+          metadata: {
+            name: '',
+            description: '',
+            category: '',
+            version: '1.0.0',
+            variables: [],
+          },
+          content: '',
+        };
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -784,7 +812,10 @@ export class TemplateEditor {
   /**
    * Process template content with variables (simplified version for preview)
    */
-  private processTemplateContent(content: string, variables: Record<string, any>): string {
+  private processTemplateContent(
+    content: string,
+    variables: Record<string, any>
+  ): string {
     let result = content;
 
     // Replace {{variable}} patterns

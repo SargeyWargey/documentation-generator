@@ -1,4 +1,9 @@
-import { FolderAnalyzer, FolderContext, FileInfo, CodeStructure } from './FolderAnalyzer';
+import {
+  FolderAnalyzer,
+  FolderContext,
+  FileInfo,
+  CodeStructure,
+} from './FolderAnalyzer';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
@@ -45,14 +50,18 @@ describe('FolderAnalyzer', () => {
 
       mockFs.readFile.mockImplementation((filePath: any) => {
         if (filePath.includes('package.json')) {
-          return Promise.resolve(JSON.stringify({
-            name: 'test-project',
-            dependencies: { lodash: '^4.0.0' },
-            devDependencies: { typescript: '^4.0.0' }
-          }));
+          return Promise.resolve(
+            JSON.stringify({
+              name: 'test-project',
+              dependencies: { lodash: '^4.0.0' },
+              devDependencies: { typescript: '^4.0.0' },
+            })
+          );
         }
         if (filePath.includes('index.ts')) {
-          return Promise.resolve('export function hello(name: string): string { return `Hello ${name}`; }');
+          return Promise.resolve(
+            'export function hello(name: string): string { return `Hello ${name}`; }'
+          );
         }
         return Promise.resolve('');
       });
@@ -98,8 +107,22 @@ describe('FolderAnalyzer', () => {
   describe('detectProjectType', () => {
     it('should detect React project', () => {
       const files: FileInfo[] = [
-        { name: 'package.json', path: 'package.json', extension: '.json', size: 100, isDirectory: false, lastModified: new Date() },
-        { name: 'App.tsx', path: 'src/App.tsx', extension: '.tsx', size: 200, isDirectory: false, lastModified: new Date() },
+        {
+          name: 'package.json',
+          path: 'package.json',
+          extension: '.json',
+          size: 100,
+          isDirectory: false,
+          lastModified: new Date(),
+        },
+        {
+          name: 'App.tsx',
+          path: 'src/App.tsx',
+          extension: '.tsx',
+          size: 200,
+          isDirectory: false,
+          lastModified: new Date(),
+        },
       ];
 
       const projectType = (analyzer as any).detectProjectType(files);
@@ -108,8 +131,22 @@ describe('FolderAnalyzer', () => {
 
     it('should detect Node.js project', () => {
       const files: FileInfo[] = [
-        { name: 'package.json', path: 'package.json', extension: '.json', size: 100, isDirectory: false, lastModified: new Date() },
-        { name: 'index.js', path: 'index.js', extension: '.js', size: 200, isDirectory: false, lastModified: new Date() },
+        {
+          name: 'package.json',
+          path: 'package.json',
+          extension: '.json',
+          size: 100,
+          isDirectory: false,
+          lastModified: new Date(),
+        },
+        {
+          name: 'index.js',
+          path: 'index.js',
+          extension: '.js',
+          size: 200,
+          isDirectory: false,
+          lastModified: new Date(),
+        },
       ];
 
       const projectType = (analyzer as any).detectProjectType(files);
@@ -187,7 +224,9 @@ async def async_function():
       expect(structure.functions.length).toBeGreaterThan(0);
 
       // Find the specific functions we care about
-      const testFunction = structure.functions.find((f: any) => f.name === 'test_function');
+      const testFunction = structure.functions.find(
+        (f: any) => f.name === 'test_function'
+      );
       expect(testFunction).toBeDefined();
 
       // Check for async function existence
@@ -237,7 +276,9 @@ function test(param) {}
 
   describe('helper methods', () => {
     it('should correctly identify excluded files', () => {
-      expect((analyzer as any).shouldExclude('node_modules/package')).toBe(true);
+      expect((analyzer as any).shouldExclude('node_modules/package')).toBe(
+        true
+      );
       expect((analyzer as any).shouldExclude('src/index.ts')).toBe(false);
       expect((analyzer as any).shouldExclude('dist/bundle.js')).toBe(true);
       expect((analyzer as any).shouldExclude('test.log')).toBe(true);
@@ -251,7 +292,9 @@ function test(param) {}
     });
 
     it('should extract function parameters', () => {
-      const params1 = (analyzer as any).extractParameters('function test(a: string, b: number)');
+      const params1 = (analyzer as any).extractParameters(
+        'function test(a: string, b: number)'
+      );
       expect(params1).toEqual(['a: string', 'b: number']);
 
       const params2 = (analyzer as any).extractParameters('function empty()');

@@ -87,7 +87,8 @@ export class ClaudeCodeIntegrator extends ClaudeIntegrator {
     const startTime = Date.now();
 
     try {
-      const generated = await this.commandGenerator.generateSlashCommand(context);
+      const generated =
+        await this.commandGenerator.generateSlashCommand(context);
       const command = await this.createSlashCommand(context, generated);
       const result = await this.executeCommand(command);
 
@@ -272,21 +273,24 @@ export class ClaudeCodeIntegrator extends ClaudeIntegrator {
       };
 
       try {
-        watcher = fsSync.watch(outputDirectory, async (_eventType, filename) => {
-          if (settled) {
-            return;
-          }
+        watcher = fsSync.watch(
+          outputDirectory,
+          async (_eventType, filename) => {
+            if (settled) {
+              return;
+            }
 
-          if (!filename) {
-            await attemptReadOutput();
-            return;
-          }
+            if (!filename) {
+              await attemptReadOutput();
+              return;
+            }
 
-          const targetPath = path.join(outputDirectory, filename.toString());
-          if (path.resolve(targetPath) === path.resolve(expectedOutputPath)) {
-            await handleSuccess();
+            const targetPath = path.join(outputDirectory, filename.toString());
+            if (path.resolve(targetPath) === path.resolve(expectedOutputPath)) {
+              await handleSuccess();
+            }
           }
-        });
+        );
       } catch (error) {
         // If watcher fails (e.g., unsupported FS), fall back to polling once
         void attemptReadOutput();

@@ -89,7 +89,7 @@ export class DebuggingService {
       const [workspaceInfo, systemInfo, diagnostics] = await Promise.all([
         this.collectWorkspaceInfo(),
         this.collectSystemInfo(),
-        this.runDiagnostics()
+        this.runDiagnostics(),
       ]);
 
       const debugInfo: DebugInfo = {
@@ -102,17 +102,19 @@ export class DebuggingService {
         configuration: this.sanitizeConfiguration(),
         recentLogs: await this.getRecentLogs(),
         systemInfo,
-        diagnostics
+        diagnostics,
       };
 
       this.logger.log(LogLevel.INFO, 'Debug information collected', {
         diagnosticCount: diagnostics.length,
-        workspaceFiles: workspaceInfo.totalFiles
+        workspaceFiles: workspaceInfo.totalFiles,
       });
 
       return debugInfo;
     } catch (error) {
-      this.logger.log(LogLevel.ERROR, 'Failed to collect debug info', { error });
+      this.logger.log(LogLevel.ERROR, 'Failed to collect debug info', {
+        error,
+      });
       throw error;
     }
   }
@@ -124,7 +126,7 @@ export class DebuggingService {
     try {
       const debugInfo = await this.collectDebugInfo();
 
-      const exportPath = filePath || await this.selectExportPath();
+      const exportPath = filePath || (await this.selectExportPath());
       if (!exportPath) {
         throw new Error('No export path selected');
       }
@@ -132,14 +134,16 @@ export class DebuggingService {
       const debugReport = this.formatDebugReport(debugInfo);
       await fs.writeFile(exportPath, debugReport);
 
-      vscode.window.showInformationMessage(
-        `Debug information exported to: ${exportPath}`,
-        'Open File'
-      ).then(action => {
-        if (action === 'Open File') {
-          vscode.window.showTextDocument(vscode.Uri.file(exportPath));
-        }
-      });
+      vscode.window
+        .showInformationMessage(
+          `Debug information exported to: ${exportPath}`,
+          'Open File'
+        )
+        .then((action) => {
+          if (action === 'Open File') {
+            vscode.window.showTextDocument(vscode.Uri.file(exportPath));
+          }
+        });
 
       return exportPath;
     } catch (error) {
@@ -152,35 +156,52 @@ export class DebuggingService {
   /**
    * Run automated troubleshooting
    */
-  async runTroubleshooting(): Promise<{ fixed: string[]; failed: string[]; manual: string[] }> {
+  async runTroubleshooting(): Promise<{
+    fixed: string[];
+    failed: string[];
+    manual: string[];
+  }> {
     const results = {
       fixed: [] as string[],
       failed: [] as string[],
-      manual: [] as string[]
+      manual: [] as string[],
     };
 
     this.logger.log(LogLevel.INFO, 'Starting automated troubleshooting');
 
     for (const [id, step] of this.troubleshootingSteps) {
       try {
-        this.logger.log(LogLevel.INFO, `Running troubleshooting step: ${step.title}`);
+        this.logger.log(
+          LogLevel.INFO,
+          `Running troubleshooting step: ${step.title}`
+        );
 
         const success = await step.action();
 
         if (success) {
           results.fixed.push(step.title);
-          this.logger.log(LogLevel.INFO, `Troubleshooting step succeeded: ${step.title}`);
+          this.logger.log(
+            LogLevel.INFO,
+            `Troubleshooting step succeeded: ${step.title}`
+          );
         } else {
           if (step.autoFix) {
             results.failed.push(step.title);
           } else {
             results.manual.push(step.title);
           }
-          this.logger.log(LogLevel.WARN, `Troubleshooting step failed: ${step.title}`);
+          this.logger.log(
+            LogLevel.WARN,
+            `Troubleshooting step failed: ${step.title}`
+          );
         }
       } catch (error) {
         results.failed.push(step.title);
-        this.logger.log(LogLevel.ERROR, `Troubleshooting step error: ${step.title}`, { error });
+        this.logger.log(
+          LogLevel.ERROR,
+          `Troubleshooting step error: ${step.title}`,
+          { error }
+        );
       }
     }
 
@@ -198,7 +219,7 @@ export class DebuggingService {
       vscode.ViewColumn.One,
       {
         enableScripts: true,
-        retainContextWhenHidden: true
+        retainContextWhenHidden: true,
       }
     );
 
@@ -206,7 +227,7 @@ export class DebuggingService {
     panel.webview.html = this.generateDebugPanelHTML(debugInfo);
 
     // Handle messages from the webview
-    panel.webview.onDidReceiveMessage(async message => {
+    panel.webview.onDidReceiveMessage(async (message) => {
       switch (message.command) {
         case 'exportDebugInfo':
           await this.exportDebugInfo();
@@ -222,7 +243,7 @@ export class DebuggingService {
           const newDebugInfo = await this.collectDebugInfo();
           panel.webview.postMessage({
             command: 'updateDebugInfo',
-            data: newDebugInfo
+            data: newDebugInfo,
           });
           break;
       }
@@ -248,18 +269,23 @@ export class DebuggingService {
       const vscodeVersion = vscode.version;
       const minVersion = '1.60.0'; // Minimum supported version
       if (this.compareVersions(vscodeVersion, minVersion) < 0) {
-        issues.push(`VS Code version ${vscodeVersion} is below minimum required ${minVersion}`);
+        issues.push(
+          `VS Code version ${vscodeVersion} is below minimum required ${minVersion}`
+        );
       }
 
       // Check workspace configuration
       const configValidation = this.configService.validateConfiguration();
       if (!configValidation.isValid) {
-        issues.push(`Configuration errors: ${configValidation.errors.join(', ')}`);
+        issues.push(
+          `Configuration errors: ${configValidation.errors.join(', ')}`
+        );
       }
 
       // Check available memory
       const memInfo = await this.getMemoryInfo();
-      if (memInfo.free < 100 * 1024 * 1024) { // Less than 100MB free
+      if (memInfo.free < 100 * 1024 * 1024) {
+        // Less than 100MB free
         issues.push('Low system memory available');
       }
 
@@ -279,7 +305,7 @@ export class DebuggingService {
 
       return {
         healthy: issues.length === 0,
-        issues
+        issues,
       };
     } catch (error) {
       issues.push(`Health check failed: ${error}`);
@@ -294,7 +320,7 @@ export class DebuggingService {
         folderCount: 0,
         hasGit: false,
         fileTypes: {},
-        totalFiles: 0
+        totalFiles: 0,
       };
     }
 
@@ -313,16 +339,20 @@ export class DebuggingService {
       }
 
       // Scan files (limited to prevent performance issues)
-      const files = await this.scanWorkspaceFiles(workspaceFolder.uri.fsPath, 1000);
+      const files = await this.scanWorkspaceFiles(
+        workspaceFolder.uri.fsPath,
+        1000
+      );
       totalFiles = files.length;
 
-      files.forEach(file => {
+      files.forEach((file) => {
         const ext = path.extname(file).toLowerCase() || 'no-extension';
         fileTypes[ext] = (fileTypes[ext] || 0) + 1;
       });
-
     } catch (error) {
-      this.logger.log(LogLevel.WARN, 'Failed to collect workspace info', { error });
+      this.logger.log(LogLevel.WARN, 'Failed to collect workspace info', {
+        error,
+      });
     }
 
     return {
@@ -330,7 +360,7 @@ export class DebuggingService {
       workspaceName: workspaceFolder.name,
       hasGit,
       fileTypes,
-      totalFiles
+      totalFiles,
     };
   }
 
@@ -341,8 +371,8 @@ export class DebuggingService {
       memory: memInfo,
       performance: {
         startupTime: this.context.globalState.get('lastStartupTime'),
-        lastGenerationTime: this.context.globalState.get('lastGenerationTime')
-      }
+        lastGenerationTime: this.context.globalState.get('lastGenerationTime'),
+      },
     };
   }
 
@@ -356,7 +386,7 @@ export class DebuggingService {
         category: 'System Health',
         level: 'error',
         message: 'System health issues detected',
-        details: healthCheck.issues
+        details: healthCheck.issues,
       });
     }
 
@@ -367,7 +397,7 @@ export class DebuggingService {
         category: 'Configuration',
         level: 'error',
         message: 'Configuration validation failed',
-        details: configValidation.errors
+        details: configValidation.errors,
       });
     }
 
@@ -378,19 +408,23 @@ export class DebuggingService {
         category: 'Performance',
         level: 'warning',
         message: 'High memory usage detected',
-        details: { usagePercent: Math.round((memInfo.used / memInfo.total) * 100) }
+        details: {
+          usagePercent: Math.round((memInfo.used / memInfo.total) * 100),
+        },
       });
     }
 
     // Recent error check
     const recentLogs = await this.getRecentLogs();
-    const errorCount = recentLogs.filter(log => log.level === LogLevel.ERROR).length;
+    const errorCount = recentLogs.filter(
+      (log) => log.level === LogLevel.ERROR
+    ).length;
     if (errorCount > 5) {
       diagnostics.push({
         category: 'Errors',
         level: 'warning',
         message: `${errorCount} errors found in recent logs`,
-        details: { errorCount }
+        details: { errorCount },
       });
     }
 
@@ -408,15 +442,24 @@ export class DebuggingService {
     return {
       total: usage.heapTotal,
       free: usage.heapTotal - usage.heapUsed,
-      used: usage.heapUsed
+      used: usage.heapUsed,
     };
   }
 
-  private async scanWorkspaceFiles(rootPath: string, maxFiles: number): Promise<string[]> {
+  private async scanWorkspaceFiles(
+    rootPath: string,
+    maxFiles: number
+  ): Promise<string[]> {
     const files: string[] = [];
-    const excludePatterns = this.configService.get<string[]>('excludePatterns', []);
+    const excludePatterns = this.configService.get<string[]>(
+      'excludePatterns',
+      []
+    );
 
-    const scanDirectory = async (dirPath: string, depth: number = 0): Promise<void> => {
+    const scanDirectory = async (
+      dirPath: string,
+      depth: number = 0
+    ): Promise<void> => {
       if (files.length >= maxFiles || depth > 5) return;
 
       try {
@@ -429,7 +472,7 @@ export class DebuggingService {
           const relativePath = path.relative(rootPath, fullPath);
 
           // Check exclude patterns
-          const isExcluded = excludePatterns.some(pattern => {
+          const isExcluded = excludePatterns.some((pattern) => {
             try {
               return new RegExp(pattern).test(relativePath);
             } catch {
@@ -498,7 +541,7 @@ export class DebuggingService {
           return true;
         }
         return validation.isValid;
-      }
+      },
     });
 
     // Template directory check
@@ -516,7 +559,7 @@ export class DebuggingService {
         } catch {
           return false;
         }
-      }
+      },
     });
 
     // Clear cache step
@@ -533,7 +576,7 @@ export class DebuggingService {
         } catch {
           return false;
         }
-      }
+      },
     });
   }
 
@@ -566,14 +609,17 @@ export class DebuggingService {
       '```',
       '',
       '## Diagnostics',
-      ...debugInfo.diagnostics.map(d =>
-        `- [${d.level.toUpperCase()}] ${d.category}: ${d.message}`
+      ...debugInfo.diagnostics.map(
+        (d) => `- [${d.level.toUpperCase()}] ${d.category}: ${d.message}`
       ),
       '',
       '## Recent Logs',
-      ...debugInfo.recentLogs.slice(-20).map(log =>
-        `[${log.timestamp.toISOString()}] ${log.level}: ${log.message}`
-      )
+      ...debugInfo.recentLogs
+        .slice(-20)
+        .map(
+          (log) =>
+            `[${log.timestamp.toISOString()}] ${log.level}: ${log.message}`
+        ),
     ];
 
     return report.join('\n');
@@ -665,13 +711,18 @@ export class DebuggingService {
 
         <div class="section">
             <h2>Diagnostics</h2>
-            ${debugInfo.diagnostics.length === 0
-              ? '<p>No issues detected</p>'
-              : debugInfo.diagnostics.map(d => `
+            ${
+              debugInfo.diagnostics.length === 0
+                ? '<p>No issues detected</p>'
+                : debugInfo.diagnostics
+                    .map(
+                      (d) => `
                 <div class="diagnostic ${d.level}">
                     <strong>[${d.level.toUpperCase()}] ${d.category}:</strong> ${d.message}
                 </div>
-              `).join('')
+              `
+                    )
+                    .join('')
             }
         </div>
 
@@ -706,7 +757,11 @@ export class DebuggingService {
     `;
   }
 
-  private showTroubleshootingResults(results: { fixed: string[]; failed: string[]; manual: string[] }): void {
+  private showTroubleshootingResults(results: {
+    fixed: string[];
+    failed: string[];
+    manual: string[];
+  }): void {
     const messages = [];
 
     if (results.fixed.length > 0) {
@@ -724,22 +779,30 @@ export class DebuggingService {
     const summary = messages.join('\n');
 
     if (results.fixed.length > 0 && results.failed.length === 0) {
-      vscode.window.showInformationMessage('Troubleshooting completed successfully!\n' + summary);
+      vscode.window.showInformationMessage(
+        'Troubleshooting completed successfully!\n' + summary
+      );
     } else if (results.failed.length > 0) {
-      vscode.window.showWarningMessage('Some troubleshooting steps failed:\n' + summary);
+      vscode.window.showWarningMessage(
+        'Some troubleshooting steps failed:\n' + summary
+      );
     } else {
-      vscode.window.showInformationMessage('Troubleshooting completed:\n' + summary);
+      vscode.window.showInformationMessage(
+        'Troubleshooting completed:\n' + summary
+      );
     }
   }
 
   private async selectExportPath(): Promise<string | undefined> {
     const result = await vscode.window.showSaveDialog({
-      defaultUri: vscode.Uri.file(`debug-report-${new Date().toISOString().split('T')[0]}.md`),
+      defaultUri: vscode.Uri.file(
+        `debug-report-${new Date().toISOString().split('T')[0]}.md`
+      ),
       filters: {
         'Markdown files': ['md'],
         'Text files': ['txt'],
-        'All files': ['*']
-      }
+        'All files': ['*'],
+      },
     });
     return result?.fsPath;
   }

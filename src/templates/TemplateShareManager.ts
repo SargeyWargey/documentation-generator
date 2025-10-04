@@ -33,7 +33,10 @@ export class TemplateShareManager {
   private validator: TemplateValidator;
   private readonly shareDirectory: string;
 
-  constructor(templateManager: TemplateManager, extensionContext: vscode.ExtensionContext) {
+  constructor(
+    templateManager: TemplateManager,
+    extensionContext: vscode.ExtensionContext
+  ) {
     this.templateManager = templateManager;
     this.validator = new TemplateValidator();
     this.shareDirectory = path.join(
@@ -56,7 +59,10 @@ export class TemplateShareManager {
   /**
    * Export a single template to file
    */
-  async exportTemplate(templateId: string, exportPath?: string): Promise<string> {
+  async exportTemplate(
+    templateId: string,
+    exportPath?: string
+  ): Promise<string> {
     const template = this.templateManager.getTemplate(templateId);
     if (!template) {
       throw new Error(`Template '${templateId}' not found`);
@@ -67,14 +73,15 @@ export class TemplateShareManager {
       template,
       exportedAt: new Date().toISOString(),
       exportedBy: await this.getCurrentUser(),
-      checksum: await this.calculateChecksum(template)
+      checksum: await this.calculateChecksum(template),
     };
 
     // Generate export content
     const exportContent = this.createTemplateExportContent(shareableTemplate);
 
     // Determine export path
-    const finalPath = exportPath || await this.promptForExportPath(template.metadata.name);
+    const finalPath =
+      exportPath || (await this.promptForExportPath(template.metadata.name));
     if (!finalPath) {
       throw new Error('Export cancelled');
     }
@@ -88,7 +95,10 @@ export class TemplateShareManager {
   /**
    * Export multiple templates as a bundle
    */
-  async exportTemplateBundle(templateIds: string[], bundleInfo?: Partial<TemplateBundle>): Promise<string> {
+  async exportTemplateBundle(
+    templateIds: string[],
+    bundleInfo?: Partial<TemplateBundle>
+  ): Promise<string> {
     const templates: ShareableTemplate[] = [];
 
     // Collect all templates
@@ -102,7 +112,7 @@ export class TemplateShareManager {
         template,
         exportedAt: new Date().toISOString(),
         exportedBy: await this.getCurrentUser(),
-        checksum: await this.calculateChecksum(template)
+        checksum: await this.calculateChecksum(template),
       });
     }
 
@@ -111,9 +121,9 @@ export class TemplateShareManager {
       name: bundleInfo?.name || 'Template Bundle',
       description: bundleInfo?.description || 'A collection of templates',
       version: bundleInfo?.version || '1.0.0',
-      author: bundleInfo?.author || await this.getCurrentUser(),
+      author: bundleInfo?.author || (await this.getCurrentUser()),
       templates,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     };
 
     // Prompt for export path
@@ -131,13 +141,16 @@ export class TemplateShareManager {
   /**
    * Import a template from file
    */
-  async importTemplate(filePath: string, options?: { overwrite?: boolean; validate?: boolean }): Promise<ImportResult> {
+  async importTemplate(
+    filePath: string,
+    options?: { overwrite?: boolean; validate?: boolean }
+  ): Promise<ImportResult> {
     const result: ImportResult = {
       success: false,
       imported: 0,
       skipped: 0,
       errors: [],
-      templates: []
+      templates: [],
     };
 
     try {
@@ -160,13 +173,18 @@ export class TemplateShareManager {
           templates = [shareableTemplate];
         } catch {
           // Try as raw template content
-          const template = await this.parseRawTemplateContent(content, filePath);
-          templates = [{
-            template,
-            exportedAt: new Date().toISOString(),
-            exportedBy: 'Unknown',
-            checksum: await this.calculateChecksum(template)
-          }];
+          const template = await this.parseRawTemplateContent(
+            content,
+            filePath
+          );
+          templates = [
+            {
+              template,
+              exportedAt: new Date().toISOString(),
+              exportedBy: 'Unknown',
+              checksum: await this.calculateChecksum(template),
+            },
+          ];
         }
       }
 
@@ -177,13 +195,14 @@ export class TemplateShareManager {
           result.imported++;
           result.templates.push(shareableTemplate.template);
         } catch (error) {
-          result.errors.push(`Failed to import ${shareableTemplate.template.metadata.name}: ${error}`);
+          result.errors.push(
+            `Failed to import ${shareableTemplate.template.metadata.name}: ${error}`
+          );
           result.skipped++;
         }
       }
 
       result.success = result.imported > 0;
-
     } catch (error) {
       result.errors.push(`Failed to read or parse file: ${error}`);
     }
@@ -202,25 +221,28 @@ export class TemplateShareManager {
       return;
     }
 
-    const action = await vscode.window.showQuickPick([
+    const action = await vscode.window.showQuickPick(
+      [
+        {
+          label: '$(export) Export Single Template',
+          description: 'Export one template to a file',
+          action: 'single',
+        },
+        {
+          label: '$(package) Export Template Bundle',
+          description: 'Export multiple templates as a bundle',
+          action: 'bundle',
+        },
+        {
+          label: '$(cloud-upload) Share to Team Repository',
+          description: 'Share templates with your team',
+          action: 'team',
+        },
+      ],
       {
-        label: '$(export) Export Single Template',
-        description: 'Export one template to a file',
-        action: 'single'
-      },
-      {
-        label: '$(package) Export Template Bundle',
-        description: 'Export multiple templates as a bundle',
-        action: 'bundle'
-      },
-      {
-        label: '$(cloud-upload) Share to Team Repository',
-        description: 'Share templates with your team',
-        action: 'team'
+        placeHolder: 'How would you like to share templates?',
       }
-    ], {
-      placeHolder: 'How would you like to share templates?'
-    });
+    );
 
     if (!action) return;
 
@@ -241,25 +263,28 @@ export class TemplateShareManager {
    * Show template import dialog
    */
   async showImportDialog(): Promise<void> {
-    const action = await vscode.window.showQuickPick([
+    const action = await vscode.window.showQuickPick(
+      [
+        {
+          label: '$(file-add) Import from File',
+          description: 'Import templates from a file',
+          action: 'file',
+        },
+        {
+          label: '$(repo) Import from Team Repository',
+          description: 'Import shared team templates',
+          action: 'team',
+        },
+        {
+          label: '$(globe) Browse Template Marketplace',
+          description: 'Find templates from the community',
+          action: 'marketplace',
+        },
+      ],
       {
-        label: '$(file-add) Import from File',
-        description: 'Import templates from a file',
-        action: 'file'
-      },
-      {
-        label: '$(repo) Import from Team Repository',
-        description: 'Import shared team templates',
-        action: 'team'
-      },
-      {
-        label: '$(globe) Browse Template Marketplace',
-        description: 'Find templates from the community',
-        action: 'marketplace'
+        placeHolder: 'How would you like to import templates?',
       }
-    ], {
-      placeHolder: 'How would you like to import templates?'
-    });
+    );
 
     if (!action) return;
 
@@ -281,21 +306,23 @@ export class TemplateShareManager {
    */
   private async handleSingleExport(): Promise<void> {
     const templates = this.templateManager.getTemplates();
-    const templateItems = templates.map(t => ({
+    const templateItems = templates.map((t) => ({
       label: t.metadata.name,
       description: t.metadata.description,
       detail: `Version: ${t.metadata.version || 'N/A'} | Category: ${t.metadata.category || 'None'}`,
-      template: t
+      template: t,
     }));
 
     const selected = await vscode.window.showQuickPick(templateItems, {
-      placeHolder: 'Select a template to export'
+      placeHolder: 'Select a template to export',
     });
 
     if (selected) {
       try {
         const exportPath = await this.exportTemplate(selected.template.id);
-        vscode.window.showInformationMessage(`Template exported to: ${exportPath}`);
+        vscode.window.showInformationMessage(
+          `Template exported to: ${exportPath}`
+        );
       } catch (error) {
         vscode.window.showErrorMessage(`Export failed: ${error}`);
       }
@@ -307,41 +334,43 @@ export class TemplateShareManager {
    */
   private async handleBundleExport(): Promise<void> {
     const templates = this.templateManager.getTemplates();
-    const templateItems = templates.map(t => ({
+    const templateItems = templates.map((t) => ({
       label: t.metadata.name,
       description: t.metadata.description,
-      picked: false
+      picked: false,
     }));
 
     const selected = await vscode.window.showQuickPick(templateItems, {
       placeHolder: 'Select templates to include in bundle',
-      canPickMany: true
+      canPickMany: true,
     });
 
     if (selected && selected.length > 0) {
       // Get bundle info
       const bundleName = await vscode.window.showInputBox({
         prompt: 'Bundle name',
-        value: 'My Template Bundle'
+        value: 'My Template Bundle',
       });
 
       if (!bundleName) return;
 
       const bundleDescription = await vscode.window.showInputBox({
         prompt: 'Bundle description',
-        value: 'A collection of useful templates'
+        value: 'A collection of useful templates',
       });
 
-      const templateIds = selected.map(s =>
-        templates.find(t => t.metadata.name === s.label)?.id
-      ).filter(Boolean) as string[];
+      const templateIds = selected
+        .map((s) => templates.find((t) => t.metadata.name === s.label)?.id)
+        .filter(Boolean) as string[];
 
       try {
         const exportPath = await this.exportTemplateBundle(templateIds, {
           name: bundleName,
-          description: bundleDescription || ''
+          description: bundleDescription || '',
         });
-        vscode.window.showInformationMessage(`Bundle exported to: ${exportPath}`);
+        vscode.window.showInformationMessage(
+          `Bundle exported to: ${exportPath}`
+        );
       } catch (error) {
         vscode.window.showErrorMessage(`Bundle export failed: ${error}`);
       }
@@ -353,7 +382,9 @@ export class TemplateShareManager {
    */
   private async handleTeamShare(): Promise<void> {
     // This would integrate with team repositories (Git, shared drives, etc.)
-    vscode.window.showInformationMessage('Team sharing will be available in a future version');
+    vscode.window.showInformationMessage(
+      'Team sharing will be available in a future version'
+    );
   }
 
   /**
@@ -366,9 +397,9 @@ export class TemplateShareManager {
       canSelectMany: false,
       filters: {
         'Template Files': ['json', 'md'],
-        'All Files': ['*']
+        'All Files': ['*'],
       },
-      title: 'Select Template File to Import'
+      title: 'Select Template File to Import',
     });
 
     if (fileUri && fileUri[0]) {
@@ -377,10 +408,13 @@ export class TemplateShareManager {
 
         if (result.success) {
           const message = `Successfully imported ${result.imported} template(s)`;
-          const details = result.skipped > 0 ? ` (${result.skipped} skipped)` : '';
+          const details =
+            result.skipped > 0 ? ` (${result.skipped} skipped)` : '';
           vscode.window.showInformationMessage(message + details);
         } else {
-          vscode.window.showErrorMessage(`Import failed: ${result.errors.join(', ')}`);
+          vscode.window.showErrorMessage(
+            `Import failed: ${result.errors.join(', ')}`
+          );
         }
       } catch (error) {
         vscode.window.showErrorMessage(`Import failed: ${error}`);
@@ -392,34 +426,45 @@ export class TemplateShareManager {
    * Handle team import
    */
   private async handleTeamImport(): Promise<void> {
-    vscode.window.showInformationMessage('Team import will be available in a future version');
+    vscode.window.showInformationMessage(
+      'Team import will be available in a future version'
+    );
   }
 
   /**
    * Handle marketplace import
    */
   private async handleMarketplaceImport(): Promise<void> {
-    vscode.window.showInformationMessage('Template marketplace will be available in a future version');
+    vscode.window.showInformationMessage(
+      'Template marketplace will be available in a future version'
+    );
   }
 
   /**
    * Create template export content
    */
-  private createTemplateExportContent(shareableTemplate: ShareableTemplate): string {
+  private createTemplateExportContent(
+    shareableTemplate: ShareableTemplate
+  ): string {
     return JSON.stringify(shareableTemplate, null, 2);
   }
 
   /**
    * Import a single template
    */
-  private async importSingleTemplate(shareableTemplate: ShareableTemplate, options?: { overwrite?: boolean; validate?: boolean }): Promise<void> {
+  private async importSingleTemplate(
+    shareableTemplate: ShareableTemplate,
+    options?: { overwrite?: boolean; validate?: boolean }
+  ): Promise<void> {
     const { template } = shareableTemplate;
 
     // Validate template if requested
     if (options?.validate !== false) {
       const validation = this.validator.validateTemplate(template);
       if (!validation.isValid) {
-        throw new Error(`Template validation failed: ${validation.errors.join(', ')}`);
+        throw new Error(
+          `Template validation failed: ${validation.errors.join(', ')}`
+        );
       }
     }
 
@@ -449,7 +494,10 @@ export class TemplateShareManager {
   /**
    * Parse raw template content
    */
-  private async parseRawTemplateContent(content: string, filePath: string): Promise<Template> {
+  private async parseRawTemplateContent(
+    content: string,
+    filePath: string
+  ): Promise<Template> {
     const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
 
     if (!frontmatterMatch) {
@@ -464,7 +512,7 @@ export class TemplateShareManager {
       id,
       metadata,
       content: templateContent,
-      filePath
+      filePath,
     };
   }
 
@@ -523,14 +571,14 @@ export class TemplateShareManager {
   private async calculateChecksum(template: Template): Promise<string> {
     const content = JSON.stringify({
       metadata: template.metadata,
-      content: template.content
+      content: template.content,
     });
 
     // Simple hash function for checksum
     let hash = 0;
     for (let i = 0; i < content.length; i++) {
       const char = content.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
+      hash = (hash << 5) - hash + char;
       hash = hash & hash; // Convert to 32-bit integer
     }
 
@@ -556,14 +604,16 @@ export class TemplateShareManager {
   /**
    * Prompt for export path
    */
-  private async promptForExportPath(templateName: string): Promise<string | undefined> {
+  private async promptForExportPath(
+    templateName: string
+  ): Promise<string | undefined> {
     const uri = await vscode.window.showSaveDialog({
       defaultUri: vscode.Uri.file(`${templateName}.json`),
       filters: {
         'Template Files': ['json'],
-        'All Files': ['*']
+        'All Files': ['*'],
       },
-      title: 'Export Template'
+      title: 'Export Template',
     });
 
     return uri?.fsPath;
@@ -572,14 +622,16 @@ export class TemplateShareManager {
   /**
    * Prompt for bundle export path
    */
-  private async promptForBundleExportPath(bundleName: string): Promise<string | undefined> {
+  private async promptForBundleExportPath(
+    bundleName: string
+  ): Promise<string | undefined> {
     const uri = await vscode.window.showSaveDialog({
       defaultUri: vscode.Uri.file(`${bundleName}.json`),
       filters: {
         'Bundle Files': ['json'],
-        'All Files': ['*']
+        'All Files': ['*'],
       },
-      title: 'Export Template Bundle'
+      title: 'Export Template Bundle',
     });
 
     return uri?.fsPath;
